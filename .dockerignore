@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+ENV
+env.bak
+venv.bak
+*.egg-info/
+dist
+build
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+.env
+.env.local
+.env.*.local
+data/
+storage/
+alembic/versions/*.py
+!alembic/versions/001_initial.py
+
+# Tests
+.pytest_cache
+.coverage
+htmlcov
+.tox
+
+# Docs build
+docs/_build
+
+# Frontend build
+frontend/build/
+frontend/dist/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp
+temp
