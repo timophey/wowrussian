@@ -8,6 +8,7 @@ from app.models.project import Project
 from app.models.page import Page, PageStatus
 from app.models.user import User
 from app.models.foreign_word import ForeignWord
+from app.models.russian_word import RussianWord
 from app.schemas.page import PageResponse, PageDetail
 from app.services.file_storage import FileStorage
 from app.core.config import settings
@@ -61,7 +62,7 @@ async def get_page(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(lambda: None)
 ):
-    """Get page details including foreign words."""
+    """Get page details including foreign and Russian words."""
     page = await safe_scalar(db, select(Page).where(Page.id == page_id))
     if not page or page.project_id != project_id:
         raise HTTPException(status_code=404, detail="Page not found")
@@ -74,13 +75,25 @@ async def get_page(
     )
     foreign_words = result.scalars().all()
     
-    # Construct PageDetail manually to avoid lazy loading of foreign_words
+    # Get russian words
+    result = await db.execute(
+        select(RussianWord)
+        .where(RussianWord.page_id == page_id)
+        .order_by(RussianWord.count.desc())
+    )
+    russian_words = result.scalars().all()
+    
+    # Construct PageDetail manually to avoid lazy loading
     page_data = PageResponse.from_orm(page).model_dump()
     detail = PageDetail(
         **page_data,
         foreign_words=[
             {"word": fw.word, "count": fw.count, "language_guess": fw.language_guess}
             for fw in foreign_words
+        ],
+        russian_words=[
+            {"word": rw.word, "count": rw.count, "source": rw.source}
+            for rw in russian_words
         ]
     )
     

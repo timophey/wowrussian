@@ -25,6 +25,73 @@ import {
 import { ArrowBack, Visibility, Code } from '@mui/icons-material';
 import { pageApi } from '../services/api';
 
+// Language code to name mapping
+const LANGUAGE_NAMES = {
+  'en': 'English',
+  'fr': 'French',
+  'de': 'German',
+  'es': 'Spanish',
+  'it': 'Italian',
+  'pt': 'Portuguese',
+  'ru': 'Russian',
+  'uk': 'Ukrainian',
+  'pl': 'Polish',
+  'cs': 'Czech',
+  'nl': 'Dutch',
+  'sv': 'Swedish',
+  'no': 'Norwegian',
+  'da': 'Danish',
+  'fi': 'Finnish',
+  'el': 'Greek',
+  'tr': 'Turkish',
+  'ar': 'Arabic',
+  'he': 'Hebrew',
+  'ja': 'Japanese',
+  'ko': 'Korean',
+  'zh': 'Chinese',
+  'hi': 'Hindi',
+  'th': 'Thai',
+  'vi': 'Vietnamese',
+};
+
+// Get language display name
+const getLanguageName = (code) => {
+  if (!code) return 'Unknown';
+  return LANGUAGE_NAMES[code.toLowerCase()] || code.toUpperCase();
+};
+
+// Get classification based on language
+const getClassification = (languageGuess) => {
+  if (!languageGuess) return 'Foreign';
+  const lang = languageGuess.toLowerCase();
+  if (lang === 'en') return 'Anglicism';
+  if (lang === 'fr') return 'Gallicism';
+  if (lang === 'de') return 'Germanism';
+  if (lang === 'it') return 'Italianism';
+  if (lang === 'es') return 'Hispanism';
+  if (lang === 'ru') return 'Russian';
+  return 'Foreign';
+};
+
+// Get classification color
+const getClassificationColor = (languageGuess) => {
+  const classification = getClassification(languageGuess);
+  switch (classification) {
+    case 'Anglicism':
+      return 'error'; // red
+    case 'Gallicism':
+      return 'secondary'; // pink/purple
+    case 'Germanism':
+      return 'warning'; // orange
+    case 'Italianism':
+      return 'info'; // light blue
+    case 'Hispanism':
+      return 'success'; // green
+    default:
+      return 'default';
+  }
+};
+
 function PageDetailPage() {
   const { projectId, pageId } = useParams();
   const navigate = useNavigate();
@@ -173,6 +240,8 @@ function PageDetailPage() {
             <TableHead>
               <TableRow>
                 <TableCell>Word</TableCell>
+                <TableCell>Language</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell align="right">Count</TableCell>
               </TableRow>
             </TableHead>
@@ -182,6 +251,15 @@ function PageDetailPage() {
                 .map((fw, idx) => (
                   <TableRow key={idx}>
                     <TableCell>{fw.word}</TableCell>
+                    <TableCell>{getLanguageName(fw.language_guess)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getClassification(fw.language_guess)}
+                        color={getClassificationColor(fw.language_guess)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
                     <TableCell align="right">{fw.count}</TableCell>
                   </TableRow>
                 ))}
@@ -192,7 +270,46 @@ function PageDetailPage() {
         <Typography color="text.secondary">No foreign words detected.</Typography>
       )}
 
-      {/* HTML Dialog */}
+    <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+      Russian Words Found
+    </Typography>
+    {page?.russian_words && page.russian_words.length > 0 ? (
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Word</TableCell>
+              <TableCell>Dictionary Source</TableCell>
+              <TableCell align="right">Count</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {page.russian_words
+              .sort((a, b) => b.count - a.count)
+              .map((rw, idx) => (
+                <TableRow key={idx}>
+                  <TableCell>{rw.word}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={rw.source === 'dictionary' ? 'Main Dictionary' :
+                             rw.source === 'fallback' ? 'Fallback Dictionary' : 'Unknown'}
+                      color={rw.source === 'dictionary' ? 'success' :
+                             rw.source === 'fallback' ? 'warning' : 'default'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell align="right">{rw.count}</TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    ) : (
+      <Typography color="text.secondary">No Russian words data available.</Typography>
+    )}
+
+    {/* HTML Dialog */}
       <Dialog open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>HTML Content</DialogTitle>
         <DialogContent>

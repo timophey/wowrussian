@@ -34,3 +34,4 @@ class Page(Base):
     # Relationships
     project = relationship("Project", back_populates="pages")
     foreign_words = relationship("ForeignWord", back_populates="page", cascade="all, delete-orphan")
+    russian_words = relationship("RussianWord", back_populates="page", cascade="all, delete-orphan")

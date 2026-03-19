@@ -19,10 +19,13 @@ class WordAnalyzer:
     """Analyzer for detecting foreign words in Russian text.
     
     Supports compliance with law №168-FZ by using normative dictionaries.
+    Tracks word sources: 'dictionary' (main), 'fallback' (built-in), or None (foreign).
     """
     
     def __init__(self, dictionary_path: str = None):
         self.russian_words: Set[str] = set()
+        self.dictionary_words: Set[str] = set()  # Words from main dictionary
+        self.fallback_words: Set[str] = set()    # Words from fallback dictionary
         self.dictionary_path = dictionary_path or settings.dictionary_path
         self._load_dictionary()
     
@@ -73,8 +76,9 @@ class WordAnalyzer:
                             # Remove any non-alphabetic characters
                             first_word = re.sub(r'[^а-яё]', '', first_word)
                             if len(first_word) >= 2:  # Skip very short words
-                                self.russian_words.add(first_word)
-                print(f"Loaded {len(self.russian_words)} words from dictionary")
+                                self.dictionary_words.add(first_word)
+                self.russian_words.update(self.dictionary_words)
+                print(f"Loaded {len(self.dictionary_words)} words from main dictionary")
             except Exception as e:
                 print(f"Error loading dictionary: {e}, using fallback")
                 self._load_fallback_dictionary()
@@ -103,7 +107,8 @@ class WordAnalyzer:
             'таким', 'такими', 'таком', 'такая', 'такие', 'такого', 'такой', 'такому', 'таком',
             'такое', 'такие', 'таких', 'такими', 'таком', 'такая', 'такое', 'такие'
         }
-        self.russian_words = common_words
+        self.fallback_words = set(common_words)
+        self.russian_words = self.fallback_words.copy()
         print(f"Using fallback dictionary with {len(self.russian_words)} words")
     
     def tokenize(self, text: str) -> List[str]:
@@ -150,7 +155,7 @@ class WordAnalyzer:
     
     def analyze(self, text: str) -> Dict:
         """
-        Analyze text and return statistics about foreign words.
+        Analyze text and return statistics about foreign and Russian words.
         
         Returns:
             {
@@ -158,8 +163,10 @@ class WordAnalyzer:
                 'russian_words': int,
                 'foreign_words': int,
                 'unique_foreign_words': int,
+                'unique_russian_words': int,
                 'foreign_word_frequency': {word: count},
-                'detected_words': list of {word, is_foreign, language_guess}
+                'russian_word_frequency': {word: count},
+                'detected_words': list of {word, is_foreign, language_guess, source}
             }
         """
         tokens = self.tokenize(text)
@@ -168,6 +175,7 @@ class WordAnalyzer:
         russian_count = 0
         foreign_count = 0
         foreign_frequency: Dict[str, int] = {}
+        russian_frequency: Dict[str, int] = {}
         detected_words: List[Dict] = []
         
         for word in tokens:
@@ -177,11 +185,18 @@ class WordAnalyzer:
             
             is_foreign = False
             language_guess = None
+            source = None  # 'dictionary', 'fallback', or None
             
             # Check if word is in Russian dictionary
             if word in self.russian_words:
                 is_foreign = False
                 russian_count += 1
+                russian_frequency[word] = russian_frequency.get(word, 0) + 1
+                # Determine source
+                if word in self.dictionary_words:
+                    source = 'dictionary'
+                elif word in self.fallback_words:
+                    source = 'fallback'
             else:
                 # Check for Latin characters - strong indicator of foreign word
                 if self.is_latin_word(word):
@@ -198,20 +213,26 @@ class WordAnalyzer:
                     # For now, treat as Russian (conservative approach)
                     is_foreign = False
                     russian_count += 1
+                    russian_frequency[word] = russian_frequency.get(word, 0) + 1
+                    source = None  # Not in any dictionary
             
             detected_words.append({
                 'word': word,
                 'is_foreign': is_foreign,
-                'language_guess': language_guess
+                'language_guess': language_guess,
+                'source': source
             })
         
         unique_foreign = len(foreign_frequency)
+        unique_russian = len(russian_frequency)
         
         return {
             'total_words': total_words,
             'russian_words': russian_count,
             'foreign_words': foreign_count,
             'unique_foreign_words': unique_foreign,
+            'unique_russian_words': unique_russian,
             'foreign_word_frequency': foreign_frequency,
+            'russian_word_frequency': russian_frequency,
             'detected_words': detected_words
         }

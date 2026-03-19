@@ -38,6 +38,7 @@ class PageDetail(PageResponse):
     html_content: Optional[str] = None
     text_content: Optional[str] = None
     foreign_words: List[Dict[str, Any]] = []  # [{"word": "test", "count": 5, "language_guess": "en"}, ...]
+    russian_words: List[Dict[str, Any]] = []  # [{"word": "привет", "count": 3, "source": "dictionary"}, ...]
 
 # Alias for compatibility with __init__.py imports
 Page = PageResponse

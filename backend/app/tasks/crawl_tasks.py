@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.models.project import Project, ProjectStatus
 from app.models.page import Page, PageStatus
 from app.models.foreign_word import ForeignWord
+from app.models.russian_word import RussianWord
 from app.models.crawl_queue import CrawlQueue, QueueStatus
 from app.models.user import User
 from app.services.crawler import Crawler
@@ -79,15 +80,42 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
         delete(ForeignWord).where(ForeignWord.page_id == page.id)
     )
     
-    # Save foreign words
+    # Create a mapping of word to language_guess from detected_words
+    language_map = {}
+    for detected in analysis['detected_words']:
+        if detected['is_foreign']:
+            language_map[detected['word']] = detected['language_guess']
+    
+    # Save foreign words with proper language detection
     for word, count in analysis['foreign_word_frequency'].items():
         fw = ForeignWord(
             page_id=page.id,
             word=word,
             count=count,
-            language_guess='en'  # TODO: Better language detection
+            language_guess=language_map.get(word)  # Use detected language or None
         )
         db.add(fw)
+    
+    # Delete existing russian words for this page to avoid duplicates on restart
+    await db.execute(
+        delete(RussianWord).where(RussianWord.page_id == page.id)
+    )
+    
+    # Save russian words with source information
+    for word, count in analysis['russian_word_frequency'].items():
+        # Find source from detected_words
+        source = None
+        for detected in analysis['detected_words']:
+            if detected['word'] == word and not detected['is_foreign']:
+                source = detected.get('source')
+                break
+        rw = RussianWord(
+            page_id=page.id,
+            word=word,
+            count=count,
+            source=source
+        )
+        db.add(rw)
     
     # Update page status
     page.status = PageStatus.ANALYZED
@@ -307,15 +335,42 @@ async def _parse_and_analyze_page_async(page_id: int):
             delete(ForeignWord).where(ForeignWord.page_id == page.id)
         )
         
-        # Save foreign words
+        # Create a mapping of word to language_guess from detected_words
+        language_map = {}
+        for detected in analysis['detected_words']:
+            if detected['is_foreign']:
+                language_map[detected['word']] = detected['language_guess']
+        
+        # Save foreign words with proper language detection
         for word, count in analysis['foreign_word_frequency'].items():
             fw = ForeignWord(
                 page_id=page.id,
                 word=word,
                 count=count,
-                language_guess='en'  # TODO: Better language detection
+                language_guess=language_map.get(word)  # Use detected language or None
             )
             db.add(fw)
+        
+        # Delete existing russian words for this page to avoid duplicates on restart
+        await db.execute(
+            delete(RussianWord).where(RussianWord.page_id == page.id)
+        )
+        
+        # Save russian words with source information
+        for word, count in analysis['russian_word_frequency'].items():
+            # Find source from detected_words
+            source = None
+            for detected in analysis['detected_words']:
+                if detected['word'] == word and not detected['is_foreign']:
+                    source = detected.get('source')
+                    break
+            rw = RussianWord(
+                page_id=page.id,
+                word=word,
+                count=count,
+                source=source
+            )
+            db.add(rw)
         
         # Update page status
         page.status = PageStatus.ANALYZED

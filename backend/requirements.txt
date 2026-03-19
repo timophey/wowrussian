@@ -4,6 +4,7 @@ sqlalchemy==2.0.23
 # Database drivers - choose one:
 # aiosqlite==0.19.0  # SQLite (default)
 asyncpg==0.29.0      # PostgreSQL
+psycopg2-binary==2.9.9  # PostgreSQL sync driver for alembic
 # aiomysql==0.2.0    # MySQL/MariaDB
 alembic==1.12.1
 celery==5.3.4

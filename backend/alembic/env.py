@@ -9,7 +9,7 @@ from alembic import context
 # Add the backend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
-from app.models import Base
+from app.core.database import Base
 from app.core.config import settings
 
 config = context.config
@@ -20,8 +20,11 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url from settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url from settings, but use sync driver for migrations
+sync_url = settings.database_url
+# Convert async URLs to sync for alembic
+sync_url = sync_url.replace('+asyncpg', '').replace('+aiomysql', '').replace('+aiosqlite', '')
+config.set_main_option("sqlalchemy.url", sync_url)
 
 
 def run_migrations_offline() -> None:
