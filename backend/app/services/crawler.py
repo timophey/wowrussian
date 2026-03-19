@@ -131,42 +131,22 @@ class Crawler:
                     links.append(normalized)
         return list(set(links))
     
-    async def crawl(
-        self,
-        max_pages: int = settings.crawler_max_pages,
-        delay: float = settings.crawler_delay
-    ) -> List[dict]:
+    async def crawl_page(self, url: str, delay: float = settings.crawler_delay) -> Optional[dict]:
         """
-        Crawl website starting from base_url.
-        Returns list of dicts with page data: {url, html, links}
+        Crawl a single page and return its data with discovered links.
+        Returns dict: {url, html, links} or None if failed.
         """
-        await self.fetch_robots_txt()
+        if url in self.visited_urls:
+            return None
         
-        queue = [self.base_url]
-        results = []
+        if not self.is_allowed(url):
+            return None
         
-        while queue and len(results) < max_pages:
-            url = queue.pop(0)
-            
-            if url in self.visited_urls:
-                continue
-            
-            if not self.is_allowed(url):
-                continue
-            
-            self.visited_urls.add(url)
-            
-            html = await self.fetch_page(url)
-            if html:
-                results.append({"url": url, "html": html})
-                
-                # Extract links and add to queue
-                links = self.extract_links(html, url)
-                for link in links:
-                    if link not in self.visited_urls and link not in queue:
-                        queue.append(link)
-            
-            # Respect crawl delay
-            await asyncio.sleep(delay)
+        self.visited_urls.add(url)
         
-        return results
+        html = await self.fetch_page(url)
+        if html:
+            links = self.extract_links(html, url)
+            return {"url": url, "html": html, "links": links}
+        
+        return None

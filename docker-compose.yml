@@ -12,6 +12,46 @@ services:
     networks:
       - wowrussian_network
 
+  # PostgreSQL Database (Recommended for production)
+  postgres:
+    image: postgres:15-alpine
+    container_name: wowrussian_postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-wowrussian}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-wowrussian_password}
+      - POSTGRES_DB=${POSTGRES_DB:-wowrussian}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - wowrussian_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wowrussian}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL/MariaDB Database (Alternative)
+  mysql:
+    image: mysql:8.0
+    container_name: wowrussian_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_password}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-wowrussian}
+      - MYSQL_USER=${MYSQL_USER:-wowrussian}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-wowrussian_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - wowrussian_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
   backend:
     build:
       context: ./backend
@@ -20,24 +60,22 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/app.db}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - STORAGE_PATH=/app/storage
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - DEBUG=${DEBUG:-True}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["http://localhost:3000","http://localhost:8000"]}
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
+      - ./dictionaries:/app/dictionaries
     depends_on:
       - redis
-    command: >
-      sh -c "
-        alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-      "
+      - postgres
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - wowrussian_network
     healthcheck:
@@ -52,7 +90,7 @@ services:
       dockerfile: Dockerfile
     container_name: wowrussian_celery
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/app.db}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -62,9 +100,13 @@ services:
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
+      - ./dictionaries:/app/dictionaries
     depends_on:
       - redis
       - backend
+      # Uncomment the database you want to use:
+      - postgres
+      # - mysql
     command: celery -A app.tasks worker --loglevel=info --concurrency=2
     networks:
       - wowrussian_network
@@ -83,6 +125,9 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
+  mysql_data:
+  dictionaries:
 
 networks:
   wowrussian_network:

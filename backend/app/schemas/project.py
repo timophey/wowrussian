@@ -48,3 +48,6 @@ class ProjectDetail(ProjectResponse):
     completed_count: int = 0
     total_foreign_words: int = 0
     unique_foreign_words: int = 0
+
+# Alias for compatibility with __init__.py imports
+Project = ProjectResponse

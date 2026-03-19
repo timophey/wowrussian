@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.user import UserCreate, User as UserSchema, Token, UserLogin
+from app.utils.db import safe_scalar
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -17,8 +18,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 async def authenticate_user(email: str, password: str, db: AsyncSession) -> User | None:
     """Authenticate user by email and password."""
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    user = await safe_scalar(db, select(User).where(User.email == email))
     if not user:
         return None
     # TODO: Implement proper password verification with passlib
@@ -43,8 +43,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user."""
     # Check if user exists
-    result = await db.execute(select(User).where(User.email == user.email))
-    existing = result.scalar_one_or_none()
+    existing = await safe_scalar(db, select(User).where(User.email == user.email))
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,8 +85,7 @@ async def get_current_user(
     """Get current user from token."""
     # TODO: Implement proper JWT verification
     # For now, just return first user (NOT PRODUCTION READY)
-    result = await db.execute(select(User))
-    user = result.scalar_one_or_none()
+    user = await safe_scalar(db, select(User))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

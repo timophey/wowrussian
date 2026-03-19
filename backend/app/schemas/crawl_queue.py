@@ -30,3 +30,6 @@ class CrawlQueueResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Alias for compatibility with __init__.py imports
+CrawlQueue = CrawlQueueResponse

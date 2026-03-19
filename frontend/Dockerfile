@@ -6,11 +6,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (cached unless package.json changes)
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy source code (only if not in .dockerignore)
+COPY src/ ./src/
+COPY public/ ./public/
+COPY .env* ./
+COPY nginx.conf ./
 
 # Build the app
 RUN npm run build

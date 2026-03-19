@@ -1,13 +1,12 @@
 """Initial migration - create all tables
 
 Revision ID: 001
-Revises: 
+Revises:
 Create Date: 2024-01-01 00:00:00
 
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision = '001'
@@ -34,7 +33,7 @@ def upgrade() -> None:
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('domain', sa.String(), nullable=False),
         sa.Column('base_url', sa.String(), nullable=False),
-        sa.Column('status', sqlite.Enum('pending', 'crawling', 'parsing', 'analyzing', 'completed', 'stopped', 'failed', name='projectstatus'), nullable=False),
+        sa.Column('status', sa.Enum('pending', 'crawling', 'parsing', 'analyzing', 'completed', 'stopped', 'failed', name='projectstatus'), nullable=False),
         sa.Column('stats', sa.JSON(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
@@ -51,7 +50,7 @@ def upgrade() -> None:
         sa.Column('url', sa.String(), nullable=False),
         sa.Column('html_file_path', sa.String(), nullable=True),
         sa.Column('text_file_path', sa.String(), nullable=True),
-        sa.Column('status', sqlite.Enum('queued', 'crawling', 'parsed', 'analyzed', 'failed', name='pagestatus'), nullable=False),
+        sa.Column('status', sa.Enum('queued', 'crawling', 'parsed', 'analyzed', 'failed', name='pagestatus'), nullable=False),
         sa.Column('words_count', sa.Integer(), nullable=True),
         sa.Column('foreign_words_count', sa.Integer(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
@@ -81,7 +80,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('project_id', sa.Integer(), nullable=False),
         sa.Column('url', sa.String(), nullable=False),
-        sa.Column('status', sqlite.Enum('pending', 'processing', 'completed', 'failed', name='queuestatus'), nullable=False),
+        sa.Column('status', sa.Enum('pending', 'processing', 'completed', 'failed', name='queuestatus'), nullable=False),
         sa.Column('attempts', sa.Integer(), nullable=False),
         sa.Column('last_attempt_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
@@ -99,7 +98,10 @@ def downgrade() -> None:
     op.drop_table('projects')
     op.drop_table('users')
     
-    # Drop enums
-    op.execute('DROP TYPE IF EXISTS queuestatus')
-    op.execute('DROP TYPE IF EXISTS pagestatus')
-    op.execute('DROP TYPE IF EXISTS projectstatus')
+    # Drop enums - only PostgreSQL needs explicit DROP TYPE
+    # MySQL enums are dropped with the table, SQLite doesn't create real types
+    conn = op.get_bind()
+    if conn.dialect.name == 'postgresql':
+        op.execute('DROP TYPE IF EXISTS queuestatus')
+        op.execute('DROP TYPE IF EXISTS pagestatus')
+        op.execute('DROP TYPE IF EXISTS projectstatus')

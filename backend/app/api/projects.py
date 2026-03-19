@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 import redis.asyncio as redis
 
 from app.core.database import get_db
@@ -9,10 +9,13 @@ from app.core.config import settings
 from app.models.project import Project, ProjectStatus
 from app.models.page import Page, PageStatus
 from app.models.user import User
+from app.models.crawl_queue import CrawlQueue, QueueStatus
+from app.models.foreign_word import ForeignWord
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectDetail
 from app.schemas.page import PageResponse
 from app.services.file_storage import FileStorage
 from app.tasks import crawl_project
+from app.utils.db import safe_scalar
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -31,6 +34,22 @@ async def create_project(
     """Create a new project from URL."""
     from urllib.parse import urlparse
     
+    # Get or create default user (for testing without auth)
+    user_id = 1
+    if current_user:
+        user_id = current_user.id
+    else:
+        # Check if default user exists, create if not
+        existing_user = await safe_scalar(db, select(User).where(User.id == user_id))
+        if not existing_user:
+            default_user = User(
+                id=user_id,
+                email="default@example.com",
+                password_hash="dummy_hash_for_testing"  # Simple placeholder for testing
+            )
+            db.add(default_user)
+            await db.commit()
+    
     # Parse URL to get domain
     parsed = urlparse(str(project.url))
     domain = parsed.netloc
@@ -38,7 +57,7 @@ async def create_project(
     
     # Create project
     new_project = Project(
-        user_id=1,  # TODO: Use current_user.id
+        user_id=user_id,
         domain=domain,
         base_url=base_url,
         status=ProjectStatus.PENDING,
@@ -57,9 +76,6 @@ async def create_project(
     )
     db.add(queue_item)
     await db.commit()
-    
-    # Trigger async crawl task
-    crawl_project.delay(new_project.id)
     
     return new_project
 
@@ -84,37 +100,45 @@ async def get_project(
     current_user: User = Depends(lambda: None)
 ):
     """Get project details with statistics."""
-    project = await db.get(Project, project_id)
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Get counts
-    total_pages = await db.scalar(
+    total_pages = await safe_scalar(
+        db,
         select(func.count()).select_from(Page).where(Page.project_id == project_id)
     )
-    queue_count = await db.scalar(
-        select(func.count()).select_from(Project.crawl_queue).where(
-            Project.crawl_queue.c.project_id == project_id,
-            Project.crawl_queue.c.status == QueueStatus.PENDING
+    queue_count = await safe_scalar(
+        db,
+        select(func.count()).select_from(CrawlQueue).where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status == QueueStatus.PENDING
         )
     )
-    processing_count = await db.scalar(
+    processing_count = await safe_scalar(
+        db,
         select(func.count()).select_from(Page).where(
             Page.project_id == project_id,
             Page.status.in_([PageStatus.QUEUED, PageStatus.CRAWLING, PageStatus.PARSED])
         )
     )
-    completed_count = await db.scalar(
+    completed_count = await safe_scalar(
+        db,
         select(func.count()).select_from(Page).where(
             Page.project_id == project_id,
             Page.status == PageStatus.ANALYZED
         )
     )
-    total_foreign_words = await db.scalar(
+    total_foreign_words = await safe_scalar(
+        db,
         select(func.sum(Page.foreign_words_count)).where(Page.project_id == project_id)
     )
-    unique_foreign_words = await db.scalar(
-        select(func.count()).select_from(Page.foreign_words).distinct(Page.foreign_words.c.word)
+    unique_foreign_words = await safe_scalar(
+        db,
+        select(func.count(func.distinct(ForeignWord.word)))
+        .join(Page, ForeignWord.page_id == Page.id)
+        .where(Page.project_id == project_id)
     )
     
     detail = ProjectDetail.from_orm(project)
@@ -135,19 +159,52 @@ async def delete_project(
     current_user: User = Depends(lambda: None)
 ):
     """Delete project and all associated data."""
-    project = await db.get(Project, project_id)
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Delete files
     storage = FileStorage(settings.storage_path)
-    storage.delete_project_files(1, project_id)  # TODO: Use current_user.id
+    storage.delete_project_files(project.user_id, project_id)
     
     # Delete project (cascade will handle related records)
     await db.delete(project)
     await db.commit()
     
     return {"message": "Project deleted"}
+
+
+@router.delete("/{project_id}/pages")
+async def clear_project_pages(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(lambda: None)
+):
+    """Clear all pages and crawl queue for a project."""
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Delete all project files (HTML and text)
+    storage = FileStorage(settings.storage_path)
+    storage.delete_project_files(project.user_id, project_id)
+    
+    # Delete all pages (cascade deletes foreign words)
+    await db.execute(
+        delete(Page).where(Page.project_id == project_id)
+    )
+    
+    # Delete all queue items
+    await db.execute(
+        delete(CrawlQueue).where(CrawlQueue.project_id == project_id)
+    )
+    
+    # Reset project stats
+    project.stats = {"total_pages": 0, "foreign_words_count": 0}
+    project.status = ProjectStatus.PENDING
+    await db.commit()
+    
+    return {"message": "Pages cleared successfully"}
 
 
 @router.post("/{project_id}/stop")
@@ -157,7 +214,7 @@ async def stop_project(
     current_user: User = Depends(lambda: None)
 ):
     """Stop project scanning."""
-    project = await db.get(Project, project_id)
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -167,3 +224,50 @@ async def stop_project(
     # TODO: Send stop signal to Celery task
     
     return {"message": "Project stopped"}
+@router.post("/{project_id}/start")
+async def start_project(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(lambda: None)
+):
+    """Manually start project crawling."""
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check if project is already running
+    if project.status in [ProjectStatus.CRAWLING, ProjectStatus.PARSING, ProjectStatus.ANALYZING]:
+        raise HTTPException(status_code=400, detail="Project is already running")
+    
+    # Clear existing pages and queue to avoid duplicates
+    storage = FileStorage(settings.storage_path)
+    storage.delete_project_files(project.user_id, project_id)
+    
+    # Delete all pages (cascade deletes foreign words)
+    await db.execute(
+        delete(Page).where(Page.project_id == project_id)
+    )
+    
+    # Delete all queue items
+    await db.execute(
+        delete(CrawlQueue).where(CrawlQueue.project_id == project_id)
+    )
+    
+    # Reset project stats
+    project.stats = {"total_pages": 0, "foreign_words_count": 0}
+    project.status = ProjectStatus.PENDING
+    await db.commit()
+    
+    # Add base URL to queue
+    queue_item = CrawlQueue(
+        project_id=project_id,
+        url=project.base_url,
+        status=QueueStatus.PENDING
+    )
+    db.add(queue_item)
+    await db.commit()
+    
+    # Trigger async crawl task
+    crawl_project.delay(project_id)
+    
+    return {"message": "Project started"}

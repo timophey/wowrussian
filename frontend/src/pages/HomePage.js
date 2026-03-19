@@ -112,6 +112,17 @@ function HomePage() {
             Results will be available in real-time as the analysis progresses.
           </Typography>
         </Box>
+|
+        <Box sx={{ mt: 3 }}>
+          <Button
+            variant="outlined"
+            size="large"
+            fullWidth
+            onClick={() => navigate('/projects')}
+          >
+            View All Projects
+          </Button>
+        </Box>
       </Box>
     </Container>
   );

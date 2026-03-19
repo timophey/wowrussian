@@ -107,6 +107,39 @@ WowRussian Analyzer is a distributed web application for crawling websites and a
 - `app/models/` - SQLAlchemy ORM models
 - `app/schemas/` - Pydantic request/response schemas
 
+### Word Analyzer
+
+**Responsibilities:**
+- Load Russian language dictionary from file or download automatically
+- Tokenize and analyze text for foreign words
+- Detect language of foreign words using langdetect
+- Comply with law №168-FZ requirements using normative dictionaries
+
+**Key Features:**
+- **Dictionary Management**: Automatically downloads dictionary if not present (configurable)
+- **Multiple Sources**: Supports loading from local file or downloading from URL
+- **Language Detection**: Uses `langdetect` library to identify foreign language (en, fr, de, etc.)
+- **Fallback Dictionary**: Minimal built-in dictionary for basic functionality when external dictionary is unavailable
+
+**Configuration:**
+- `DICTIONARY_PATH`: Path to Russian words dictionary file
+- `DICTIONARY_URL`: URL to download dictionary from
+- `AUTO_DOWNLOAD_DICTIONARY`: Enable/disable automatic download
+
+**Dictionary Format:**
+- One word per line
+- UTF-8 encoding
+- Comments starting with `#` are ignored
+- Only Cyrillic words are used; non-alphabetic characters are stripped
+
+**Algorithm:**
+1. Tokenize text (lowercase, remove punctuation)
+2. For each word:
+   - If in Russian dictionary → mark as Russian
+   - Else if contains Latin characters → mark as foreign, detect language
+   - Else (Cyrillic but not in dictionary) → mark as Russian (conservative)
+3. Aggregate statistics (total, foreign, unique foreign words, frequency)
+
 ### Database (SQLite)
 
 **Schema:**
@@ -335,8 +368,9 @@ GET /health
 3. **Export**: CSV/JSON export of results
 4. **Comparison**: Compare different crawls of same site
 5. **API Keys**: For external integrations
-6. **Advanced Language Detection**: Use langdetect or similar
-7. **Custom Dictionaries**: Per-user custom word lists
-8. **GraphQL API**: Alternative to REST
-9. **Microservices**: Split crawler, analyzer into separate services
-10. **Message Queue**: RabbitMQ as alternative to Redis
+6. **Content Checker Integration**: Integration with https://content-checker.ru/ for official compliance verification
+7. **Normative Dictionaries Support**: Direct integration with RAS normative dictionaries (Orthoepic, Foreign Words, Explanatory)
+8. **Custom Dictionaries**: Per-user custom word lists
+9. **GraphQL API**: Alternative to REST
+10. **Microservices**: Split crawler, analyzer into separate services
+11. **Message Queue**: RabbitMQ as alternative to Redis

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 
@@ -23,7 +23,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     domain = Column(String, nullable=False, index=True)
     base_url = Column(String, nullable=False)
     status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.PENDING, nullable=False)

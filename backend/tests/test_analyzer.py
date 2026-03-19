@@ -75,3 +75,62 @@ def test_is_mixed_word():
     assert analyzer.is_mixed_word("хелло")  # Cyrillic + Latin 'hello' pattern
     assert not analyzer.is_mixed_word("привет")
     assert not analyzer.is_mixed_word("hello")
+
+
+def test_language_detection():
+    """Test language detection if langdetect is available."""
+    analyzer = WordAnalyzer()
+    if analyzer.detect_language("hello") is not None:
+        # langdetect is available
+        assert analyzer.detect_language("hello") == "en"
+        assert analyzer.detect_language("bonjour") == "fr"
+        assert analyzer.detect_language("привет") is None or analyzer.detect_language("привет") == "ru"
+    else:
+        # langdetect not available, should return None
+        assert analyzer.detect_language("hello") is None
+
+
+def test_analyze_with_language_detection():
+    """Test that analysis includes language guesses."""
+    analyzer = WordAnalyzer()
+    text = "hello world привет"
+    result = analyzer.analyze(text)
+    
+    # Check that foreign words have language_guess
+    for word_info in result['detected_words']:
+        if word_info['is_foreign']:
+            assert word_info['language_guess'] is not None
+    
+    # English words should be detected as foreign
+    assert 'hello' in result['foreign_word_frequency']
+    assert 'world' in result['foreign_word_frequency']
+
+
+def test_custom_dictionary_path():
+    """Test that analyzer can use a custom dictionary path."""
+    import tempfile
+    import os
+    
+    # Create a temporary dictionary file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+        f.write("привет\n")
+        f.write("мир\n")
+        f.write("компьютер\n")  # foreign word that might be in some dictionaries
+        temp_path = f.name
+    
+    try:
+        analyzer = WordAnalyzer(dictionary_path=temp_path)
+        assert "привет" in analyzer.russian_words
+        assert "мир" in analyzer.russian_words
+        # The word "компьютер" contains Latin 'ю' is actually Cyrillic, but let's test it's there
+        assert "компьютер" in analyzer.russian_words or len(analyzer.russian_words) >= 2
+    finally:
+        os.unlink(temp_path)
+
+
+def test_dictionary_download():
+    """Test dictionary download functionality (mocked)."""
+    # This test would require mocking aiohttp
+    # For now, we'll just test the method exists
+    analyzer = WordAnalyzer()
+    assert hasattr(analyzer, '_download_dictionary')

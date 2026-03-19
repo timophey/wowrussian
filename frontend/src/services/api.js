@@ -16,6 +16,8 @@ export const projectApi = {
   get: (id) => api.get(`/projects/${id}`),
   delete: (id) => api.delete(`/projects/${id}`),
   stop: (id) => api.post(`/projects/${id}/stop`),
+  start: (id) => api.post(`/projects/${id}/start`),
+  clearPages: (id) => api.delete(`/projects/${id}/pages`),
 };
 
 // Page API

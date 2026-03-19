@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     app_name: str = "WowRussian Analyzer"
     debug: bool = Field(default=False, env="DEBUG")
-    secret_key: str = Field(..., env="SECRET_KEY")
+    secret_key: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     access_token_expire_minutes: int = Field(default=10080, env="ACCESS_TOKEN_EXPIRE_MINUTES")
 
@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     crawler_delay: int = Field(default=1, env="CRAWLER_DELAY")
     crawler_timeout: int = Field(default=30, env="CRAWLER_TIMEOUT")
     crawler_max_pages: int = Field(default=1000, env="CRAWLER_MAX_PAGES")
+
+    # Dictionary settings for foreign word analysis (law №168-FZ compliance)
+    dictionary_path: str = Field(default="/app/dictionaries/russian_words.txt", env="DICTIONARY_PATH")
+    dictionary_url: str = Field(default="https://raw.githubusercontent.com/danakt/russian-words/master/russian.txt", env="DICTIONARY_URL")
+    auto_download_dictionary: bool = Field(default=True, env="AUTO_DOWNLOAD_DICTIONARY")
 
     class Config:
         env_file = ".env"

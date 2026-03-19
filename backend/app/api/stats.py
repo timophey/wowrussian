@@ -8,6 +8,7 @@ from app.models.project import Project, ProjectStatus
 from app.models.page import Page, PageStatus
 from app.models.foreign_word import ForeignWord
 from app.models.user import User
+from app.utils.db import safe_scalar
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -20,7 +21,7 @@ async def get_project_stats(
 ) -> Dict[str, Any]:
     """Get detailed statistics for a project."""
     # Check project exists
-    project = await db.get(Project, project_id)
+    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -36,17 +37,20 @@ async def get_project_stats(
     total_pages = sum(status_dist.values())
     
     # Total words
-    total_words = await db.scalar(
+    total_words = await safe_scalar(
+        db,
         select(func.sum(Page.words_count)).where(Page.project_id == project_id)
     ) or 0
     
     # Total foreign words
-    total_foreign_words = await db.scalar(
+    total_foreign_words = await safe_scalar(
+        db,
         select(func.sum(Page.foreign_words_count)).where(Page.project_id == project_id)
     ) or 0
     
     # Unique foreign words
-    unique_foreign_words = await db.scalar(
+    unique_foreign_words = await safe_scalar(
+        db,
         select(func.count(func.distinct(ForeignWord.word)))
         .select_from(ForeignWord)
         .join(Page)

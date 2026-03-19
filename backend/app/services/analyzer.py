@@ -1,47 +1,110 @@
 import re
-from typing import Dict, List, Tuple
+import os
+from typing import Dict, List, Optional, Set
 from pathlib import Path
 import string
 
+try:
+    from langdetect import detect, DetectorFactory
+    # Set seed for consistent results
+    DetectorFactory.seed = 0
+    LANGDETECT_AVAILABLE = True
+except ImportError:
+    LANGDETECT_AVAILABLE = False
+
+from app.core.config import settings
+
 
 class WordAnalyzer:
-    """Analyzer for detecting foreign words in Russian text."""
+    """Analyzer for detecting foreign words in Russian text.
+    
+    Supports compliance with law №168-FZ by using normative dictionaries.
+    """
     
     def __init__(self, dictionary_path: str = None):
-        self.russian_words: set[str] = set()
-        self._load_dictionary(dictionary_path)
+        self.russian_words: Set[str] = set()
+        self.dictionary_path = dictionary_path or settings.dictionary_path
+        self._load_dictionary()
     
-    def _load_dictionary(self, path: str) -> None:
-        """Load Russian words dictionary."""
-        if path and Path(path).exists():
-            with open(path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    word = line.strip().lower()
-                    if word:
-                        self.russian_words.add(word)
+    def _download_dictionary(self, url: str, target_path: str) -> bool:
+        """Download dictionary from URL."""
+        try:
+            import aiohttp
+            import asyncio
+            
+            async def fetch():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                            with open(target_path, 'w', encoding='utf-8') as f:
+                                f.write(content)
+                            return True
+                return False
+            
+            return asyncio.run(fetch())
+        except Exception as e:
+            print(f"Failed to download dictionary: {e}")
+            return False
+    
+    def _load_dictionary(self) -> None:
+        """Load Russian words dictionary from file or use built-in fallback."""
+        path = Path(self.dictionary_path)
+        
+        # Try to download if auto-download is enabled and file doesn't exist
+        if not path.exists() and settings.auto_download_dictionary:
+            print(f"Dictionary not found at {path}, attempting to download...")
+            success = self._download_dictionary(settings.dictionary_url, str(path))
+            if success:
+                print(f"Dictionary downloaded to {path}")
+        
+        # Load dictionary if file exists
+        if path.exists():
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        word = line.strip().lower()
+                        if word and not word.startswith('#'):
+                            # Handle different dictionary formats
+                            # Some dictionaries have multiple words per line or definitions
+                            # Take only the first word if line contains spaces
+                            first_word = word.split()[0] if ' ' in word else word
+                            # Remove any non-alphabetic characters
+                            first_word = re.sub(r'[^а-яё]', '', first_word)
+                            if len(first_word) >= 2:  # Skip very short words
+                                self.russian_words.add(first_word)
+                print(f"Loaded {len(self.russian_words)} words from dictionary")
+            except Exception as e:
+                print(f"Error loading dictionary: {e}, using fallback")
+                self._load_fallback_dictionary()
         else:
-            # Use a minimal built-in dictionary
-            # In production, download from https://github.com/danakt/russian-words
-            common_words = {
-                'и', 'в', 'не', 'что', 'он', 'на', 'я', 'с', 'со', 'как', 'а', 'то', 'все', 'она', 'так',
-                'его', 'но', 'да', 'ты', 'к', 'у', 'же', 'вы', 'за', 'бы', 'по', 'только', 'ее', 'мне',
-                'было', 'вот', 'от', 'меня', 'еще', 'нет', 'о', 'из', 'ему', 'теперь', 'когда', 'даже',
-                'ну', 'вдруг', 'ли', 'если', 'уже', 'или', 'ни', 'быть', 'был', 'него', 'до', 'вас',
-                'нибудь', 'опять', 'уж', 'вам', 'ведь', 'там', 'потом', 'себя', 'ничего', 'ей', 'может',
-                'они', 'тут', 'где', 'есть', 'надо', 'ней', 'для', 'мы', 'тебя', 'их', 'чем', 'была',
-                'сам', 'чтоб', 'без', 'будто', 'чего', 'раз', 'тоже', 'себе', 'под', 'будет', 'ж', 'тогда',
-                'кто', 'этот', 'того', 'потому', 'этого', 'какой', 'совсем', 'ним', 'здесь', 'этом',
-                'один', 'почти', 'мой', 'тем', 'чтобы', 'нее', 'сейчас', 'были', 'куда', 'зачем', 'всех',
-                'никогда', 'можно', 'при', 'наконец', 'два', 'об', 'другой', 'хоть', 'после', 'над',
-                'больше', 'тот', 'через', 'эти', 'нас', 'про', 'всего', 'них', 'какая', 'много', 'разве',
-                'три', 'эту', 'моя', 'впрочем', 'хорошо', 'свою', 'этой', 'перед', 'иногда', 'лучше',
-                'чуть', 'том', 'нельзя', 'такой', 'им', 'более', 'всегда', 'конечно', 'всю', 'между',
-                'каждый', 'такие', 'мне', 'тебя', 'меня', 'свои', 'это', 'какие', 'который', 'пока',
-                'каждого', 'такая', 'своей', 'своим', 'нашей', 'вашей', 'наших', 'ваших', 'таких',
-                'таким', 'такими', 'таком', 'такая', 'такие', 'такого', 'такой', 'такому', 'таком',
-                'такое', 'такие', 'таких', 'такими', 'таком', 'такая', 'такое', 'такие'
-            }
-            self.russian_words = common_words
+            self._load_fallback_dictionary()
+    
+    def _load_fallback_dictionary(self) -> None:
+        """Load minimal built-in dictionary as fallback."""
+        # Common Russian words for basic functionality
+        common_words = {
+            'и', 'в', 'не', 'что', 'он', 'на', 'я', 'с', 'со', 'как', 'а', 'то', 'все', 'она', 'так',
+            'его', 'но', 'да', 'ты', 'к', 'у', 'же', 'вы', 'за', 'бы', 'по', 'только', 'ее', 'мне',
+            'было', 'вот', 'от', 'меня', 'еще', 'нет', 'о', 'из', 'ему', 'теперь', 'когда', 'даже',
+            'ну', 'вдруг', 'ли', 'если', 'уже', 'или', 'ни', 'быть', 'был', 'него', 'до', 'вас',
+            'нибудь', 'опять', 'уж', 'вам', 'ведь', 'там', 'потом', 'себя', 'ничего', 'ей', 'может',
+            'они', 'тут', 'где', 'есть', 'надо', 'ней', 'для', 'мы', 'тебя', 'их', 'чем', 'была',
+            'сам', 'чтоб', 'без', 'будто', 'чего', 'раз', 'тоже', 'себе', 'под', 'будет', 'ж', 'тогда',
+            'кто', 'этот', 'того', 'потому', 'этого', 'какой', 'совсем', 'ним', 'здесь', 'этом',
+            'один', 'почти', 'мой', 'тем', 'чтобы', 'нее', 'сейчас', 'были', 'куда', 'зачем', 'всех',
+            'никогда', 'можно', 'при', 'наконец', 'два', 'об', 'другой', 'хоть', 'после', 'над',
+            'больше', 'тот', 'через', 'эти', 'нас', 'про', 'всего', 'них', 'какая', 'много', 'разве',
+            'три', 'эту', 'моя', 'впрочем', 'хорошо', 'свою', 'этой', 'перед', 'иногда', 'лучше',
+            'чуть', 'том', 'нельзя', 'такой', 'им', 'более', 'всегда', 'конечно', 'всю', 'между',
+            'каждый', 'такие', 'мне', 'тебя', 'меня', 'свои', 'это', 'какие', 'который', 'пока',
+            'каждого', 'такая', 'своей', 'своим', 'нашей', 'вашей', 'наших', 'ваших', 'таких',
+            'таким', 'такими', 'таком', 'такая', 'такие', 'такого', 'такой', 'такому', 'таком',
+            'такое', 'такие', 'таких', 'такими', 'таком', 'такая', 'такое', 'такие'
+        }
+        self.russian_words = common_words
+        print(f"Using fallback dictionary with {len(self.russian_words)} words")
     
     def tokenize(self, text: str) -> List[str]:
         """
@@ -69,6 +132,21 @@ class WordAnalyzer:
         has_cyrillic = bool(re.search(r'[а-яА-ЯёЁ]', word))
         has_latin = bool(re.search(r'[a-zA-Z]', word))
         return has_cyrillic and has_latin
+    
+    def detect_language(self, word: str) -> Optional[str]:
+        """Detect language of a word using langdetect."""
+        if not LANGDETECT_AVAILABLE:
+            return None
+        
+        try:
+            # langdetect works better with longer text
+            if len(word) >= 3:
+                lang = detect(word)
+                return lang
+        except Exception:
+            return None
+        
+        return None
     
     def analyze(self, text: str) -> Dict:
         """
@@ -105,15 +183,19 @@ class WordAnalyzer:
                 is_foreign = False
                 russian_count += 1
             else:
-                # Check for Latin characters
+                # Check for Latin characters - strong indicator of foreign word
                 if self.is_latin_word(word):
                     is_foreign = True
-                    language_guess = 'en'  # Assume English for now
+                    # Try to detect language
+                    language_guess = self.detect_language(word)
+                    if not language_guess:
+                        language_guess = 'en'  # fallback to English
                     foreign_count += 1
                     foreign_frequency[word] = foreign_frequency.get(word, 0) + 1
                 else:
                     # Word not in dictionary, but no Latin chars
-                    # Could be rare Russian word or other Cyrillic-based language
+                    # Could be rare Russian word, proper noun, or other Cyrillic-based language
+                    # For now, treat as Russian (conservative approach)
                     is_foreign = False
                     russian_count += 1
             

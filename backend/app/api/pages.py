@@ -7,14 +7,16 @@ from app.core.database import get_db
 from app.models.project import Project
 from app.models.page import Page, PageStatus
 from app.models.user import User
+from app.models.foreign_word import ForeignWord
 from app.schemas.page import PageResponse, PageDetail
 from app.services.file_storage import FileStorage
 from app.core.config import settings
+from app.utils.db import safe_scalar
 
-router = APIRouter(prefix="/pages", tags=["pages"])
+router = APIRouter(prefix="/projects", tags=["pages"])
 
 
-@router.get("/{project_id}", response_model=List[PageResponse])
+@router.get("/{project_id}/pages", response_model=List[PageResponse])
 async def list_pages(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -34,7 +36,7 @@ async def list_pages(
     return pages
 
 
-@router.get("/{project_id}/{page_id}", response_model=PageDetail)
+@router.get("/{project_id}/pages/{page_id}", response_model=PageDetail)
 async def get_page(
     project_id: int,
     page_id: int,
@@ -42,21 +44,27 @@ async def get_page(
     current_user: User = Depends(lambda: None)
 ):
     """Get page details including foreign words."""
-    page = await db.get(Page, page_id)
+    page = await safe_scalar(db, select(Page).where(Page.id == page_id))
     if not page or page.project_id != project_id:
         raise HTTPException(status_code=404, detail="Page not found")
     
     # Get foreign words
     result = await db.execute(
-        select(page.foreign_words).order_by(page.foreign_words.c.count.desc())
+        select(ForeignWord)
+        .where(ForeignWord.page_id == page_id)
+        .order_by(ForeignWord.count.desc())
     )
     foreign_words = result.scalars().all()
     
-    detail = PageDetail.from_orm(page)
-    detail.foreign_words = [
-        {"word": fw.word, "count": fw.count, "language_guess": fw.language_guess}
-        for fw in foreign_words
-    ]
+    # Construct PageDetail manually to avoid lazy loading of foreign_words
+    page_data = PageResponse.from_orm(page).model_dump()
+    detail = PageDetail(
+        **page_data,
+        foreign_words=[
+            {"word": fw.word, "count": fw.count, "language_guess": fw.language_guess}
+            for fw in foreign_words
+        ]
+    )
     
     # Load HTML and text content from files
     storage = FileStorage(settings.storage_path)
@@ -75,7 +83,7 @@ async def get_page(
     return detail
 
 
-@router.get("/{project_id}/{page_id}/html")
+@router.get("/{project_id}/pages/{page_id}/html")
 async def get_page_html(
     project_id: int,
     page_id: int,
@@ -83,7 +91,7 @@ async def get_page_html(
     current_user: User = Depends(lambda: None)
 ):
     """Get raw HTML of a page."""
-    page = await db.get(Page, page_id)
+    page = await safe_scalar(db, select(Page).where(Page.id == page_id))
     if not page or page.project_id != project_id:
         raise HTTPException(status_code=404, detail="Page not found")
     
@@ -95,7 +103,7 @@ async def get_page_html(
         raise HTTPException(status_code=404, detail="HTML file not found")
 
 
-@router.get("/{project_id}/{page_id}/text")
+@router.get("/{project_id}/pages/{page_id}/text")
 async def get_page_text(
     project_id: int,
     page_id: int,
@@ -103,7 +111,7 @@ async def get_page_text(
     current_user: User = Depends(lambda: None)
 ):
     """Get extracted text of a page."""
-    page = await db.get(Page, page_id)
+    page = await safe_scalar(db, select(Page).where(Page.id == page_id))
     if not page or page.project_id != project_id:
         raise HTTPException(status_code=404, detail="Page not found")
     

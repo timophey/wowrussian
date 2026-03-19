@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, AnyHttpUrl
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -37,4 +37,7 @@ class PageResponse(BaseModel):
 class PageDetail(PageResponse):
     html_content: Optional[str] = None
     text_content: Optional[str] = None
-    foreign_words: List[Dict[str, int]] = []  # [{"word": "test", "count": 5}, ...]
+    foreign_words: List[Dict[str, Any]] = []  # [{"word": "test", "count": 5, "language_guess": "en"}, ...]
+
+# Alias for compatibility with __init__.py imports
+Page = PageResponse

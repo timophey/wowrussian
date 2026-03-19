@@ -1,12 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import redis.asyncio as redis
 import json
 
-from app.core.database import get_db
 from app.core.config import settings
 
-router = APIRouter()
+websocket_router = APIRouter()
 
 
 class ConnectionManager:
@@ -40,11 +38,10 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/ws/projects/{project_id}")
+@websocket_router.websocket("/ws/projects/{project_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
-    project_id: int,
-    db: AsyncSession = Depends(get_db)
+    project_id: int
 ):
     """WebSocket endpoint for real-time project updates."""
     await manager.connect(project_id, websocket)
