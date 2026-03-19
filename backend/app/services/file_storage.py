@@ -86,3 +86,9 @@ class FileStorage:
             html_file.unlink()
         if text_file.exists():
             text_file.unlink()
+    
+    def delete_file(self, relative_path: str) -> None:
+        """Delete a file given its relative path from storage base."""
+        file_path = self.base_path / relative_path
+        if file_path.exists():
+            file_path.unlink()
