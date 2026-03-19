@@ -67,6 +67,20 @@ AsyncSessionLocal = sessionmaker(
 Base = declarative_base()
 
 
+def create_session_factory():
+    """
+    Create a new session factory with a fresh engine.
+    This ensures the engine is created in the same event loop where it will be used,
+    avoiding 'Future attached to a different loop' errors.
+    """
+    local_engine = create_async_engine(database_url, **engine_kwargs)
+    return sessionmaker(
+        local_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
 async def get_db() -> AsyncSession:
     """Dependency for getting database session."""
     async with AsyncSessionLocal() as session:

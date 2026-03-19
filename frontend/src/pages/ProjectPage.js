@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TableSortLabel,
 } from '@mui/material';
 import { Visibility, Stop, ArrowBack, PlayArrow, Delete } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
@@ -53,6 +54,8 @@ function ProjectPage() {
   const [pageDetailOpen, setPageDetailOpen] = useState(false);
   const [pageDetail, setPageDetail] = useState(null);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   const { messages, isConnected } = useWebSocket(id);
 
@@ -76,7 +79,7 @@ function ProjectPage() {
     try {
       const [projectRes, pagesRes, statsRes] = await Promise.all([
         projectApi.get(id),
-        pageApi.list(id),
+        pageApi.list(id, { sort_by: sortBy, sort_order: sortOrder }),
         statsApi.get(id),
       ]);
       // Only update state if this is still the current project
@@ -96,7 +99,7 @@ function ProjectPage() {
         setLoading(false);
       }
     }
-  }, [id]);
+  }, [id, sortBy, sortOrder]);
 
   useEffect(() => {
     setLoading(true);
@@ -261,6 +264,17 @@ function ProjectPage() {
     }
   };
 
+  const handleRequestSort = (field) => {
+    let newSortOrder;
+    if (sortBy === field) {
+      newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      newSortOrder = 'asc';
+    }
+    setSortBy(field);
+    setSortOrder(newSortOrder);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -379,10 +393,42 @@ function ProjectPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>URL</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Foreign Words</TableCell>
-              <TableCell align="right">Total Words</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'url'}
+                  direction={sortBy === 'url' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('url')}
+                >
+                  URL
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'status'}
+                  direction={sortBy === 'status' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('status')}
+                >
+                  Status
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={sortBy === 'foreign_words_count'}
+                  direction={sortBy === 'foreign_words_count' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('foreign_words_count')}
+                >
+                  Foreign Words
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={sortBy === 'words_count'}
+                  direction={sortBy === 'words_count' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('words_count')}
+                >
+                  Total Words
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>

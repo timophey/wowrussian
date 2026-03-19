@@ -46,23 +46,20 @@ async def websocket_endpoint(
     """WebSocket endpoint for real-time project updates."""
     await manager.connect(project_id, websocket)
     
-    # Subscribe to Redis pub/sub for this project
-    redis_client = redis.from_url(settings.redis_url)
-    pubsub = redis_client.pubsub()
-    await pubsub.subscribe(f"project:{project_id}:updates")
-    
-    try:
-        # Listen for messages from Redis
-        async for message in pubsub.listen():
-            if message["type"] == "message":
-                data = json.loads(message["data"])
-                await manager.broadcast(project_id, data)
-    except WebSocketDisconnect:
-        manager.disconnect(project_id, websocket)
-        await pubsub.unsubscribe(f"project:{project_id}:updates")
-    except Exception as e:
-        manager.disconnect(project_id, websocket)
-        await pubsub.unsubscribe(f"project:{project_id}:updates")
-        raise e
-    finally:
-        await redis_client.close()
+    async with redis.from_url(settings.redis_url) as redis_client:
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe(f"project:{project_id}:updates")
+        
+        try:
+            # Listen for messages from Redis
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    data = json.loads(message["data"])
+                    await manager.broadcast(project_id, data)
+        except WebSocketDisconnect:
+            manager.disconnect(project_id, websocket)
+            await pubsub.unsubscribe(f"project:{project_id}:updates")
+        except Exception as e:
+            manager.disconnect(project_id, websocket)
+            await pubsub.unsubscribe(f"project:{project_id}:updates")
+            raise e

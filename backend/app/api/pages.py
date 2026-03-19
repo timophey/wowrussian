@@ -1,7 +1,7 @@
 from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, asc, desc
 
 from app.core.database import get_db
 from app.models.project import Project
@@ -21,15 +21,33 @@ async def list_pages(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     status: PageStatus = None,
+    sort_by: str = Query("created_at", description="Field to sort by"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
     current_user: User = Depends(lambda: None)
 ):
-    """List pages for a project with optional status filter."""
+    """List pages for a project with optional status filter and sorting."""
     query = select(Page).where(Page.project_id == project_id)
     
     if status:
         query = query.where(Page.status == status)
     
-    query = query.order_by(Page.created_at.desc())
+    # Validate sort_by parameter
+    allowed_sort_fields = {
+        "url": Page.url,
+        "status": Page.status,
+        "foreign_words_count": Page.foreign_words_count,
+        "words_count": Page.words_count,
+        "created_at": Page.created_at
+    }
+    
+    if sort_by not in allowed_sort_fields:
+        sort_by = "created_at"
+    
+    # Validate sort_order
+    order_func = asc if sort_order.lower() == "asc" else desc
+    
+    # Apply ordering
+    query = query.order_by(order_func(allowed_sort_fields[sort_by]))
     
     result = await db.execute(query)
     pages = result.scalars().all()

@@ -12,7 +12,7 @@ const api = axios.create({
 // Project API
 export const projectApi = {
   create: (url) => api.post('/projects', { url }),
-  list: () => api.get('/projects'),
+  list: (params = {}) => api.get('/projects', { params }),
   get: (id) => api.get(`/projects/${id}`),
   delete: (id) => api.delete(`/projects/${id}`),
   stop: (id) => api.post(`/projects/${id}/stop`),
@@ -22,10 +22,7 @@ export const projectApi = {
 
 // Page API
 export const pageApi = {
-  list: (projectId, status) => {
-    const params = status ? { status } : {};
-    return api.get(`/projects/${projectId}/pages`, { params });
-  },
+  list: (projectId, params = {}) => api.get(`/projects/${projectId}/pages`, { params }),
   get: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}`),
   getHtml: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}/html`),
   getText: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}/text`),

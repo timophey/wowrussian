@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, asc, desc
 import redis.asyncio as redis
 
 from app.core.database import get_db
@@ -83,12 +83,29 @@ async def create_project(
 @router.get("", response_model=List[ProjectResponse])
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(lambda: None),
+    sort_by: str = Query("created_at", description="Field to sort by"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc")
 ):
     """List all projects for current user."""
-    result = await db.execute(
-        select(Project).where(Project.user_id == 1).order_by(Project.created_at.desc())
-    )
+    # Validate sort_by parameter
+    allowed_sort_fields = {
+        "domain": Project.domain,
+        "status": Project.status,
+        "created_at": Project.created_at
+    }
+    
+    if sort_by not in allowed_sort_fields:
+        sort_by = "created_at"
+    
+    # Validate sort_order
+    order_func = asc if sort_order.lower() == "asc" else desc
+    
+    # Build query with dynamic ordering
+    query = select(Project).where(Project.user_id == 1)
+    query = query.order_by(order_func(allowed_sort_fields[sort_by]))
+    
+    result = await db.execute(query)
     projects = result.scalars().all()
     return projects
 

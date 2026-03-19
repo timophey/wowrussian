@@ -7,7 +7,7 @@ import redis.asyncio as redis
 from celery import current_task
 
 from app.tasks.celery_app import celery_app
-from app.core.database import engine, AsyncSessionLocal
+from app.core.database import create_session_factory
 from app.core.config import settings
 from app.models.project import Project, ProjectStatus
 from app.models.page import Page, PageStatus
@@ -23,14 +23,11 @@ from app.utils.db import safe_scalar
 
 async def publish_update(project_id: int, event: str, data: dict):
     """Publish update to Redis channel."""
-    redis_client = redis.from_url(settings.redis_url)
-    try:
+    async with redis.from_url(settings.redis_url) as redis_client:
         await redis_client.publish(
             f"project:{project_id}:updates",
             json.dumps({"event": event, "data": data})
         )
-    finally:
-        await redis_client.close()
 
 
 @celery_app.task(bind=True, name="crawl_project")
@@ -114,6 +111,7 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
 
 async def _crawl_project_async(project_id: int, task_id: str):
     """Async implementation of crawl_project."""
+    AsyncSessionLocal = create_session_factory()
     async with AsyncSessionLocal() as db:
         try:
             # Get project
@@ -254,6 +252,7 @@ def parse_and_analyze_page(self, page_id: int):
 async def _parse_and_analyze_page_async(page_id: int):
     """Async implementation of parse_and_analyze_page."""
     import sys
+    AsyncSessionLocal = create_session_factory()
     db = AsyncSessionLocal()
     try:
         # First, check if page exists

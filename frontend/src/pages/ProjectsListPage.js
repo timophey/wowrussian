@@ -16,6 +16,7 @@ import {
   Alert,
   IconButton,
   Button,
+  TableSortLabel,
 } from '@mui/material';
 import { Visibility, Delete, Add } from '@mui/icons-material';
 import { projectApi } from '../services/api';
@@ -35,10 +36,12 @@ function ProjectsListPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (params = {}) => {
     try {
-      const res = await projectApi.list();
+      const res = await projectApi.list(params);
       setProjects(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load projects');
@@ -48,8 +51,12 @@ function ProjectsListPage() {
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    const params = {
+      sort_by: sortBy,
+      sort_order: sortOrder
+    };
+    fetchProjects(params);
+  }, [sortBy, sortOrder]);
 
   const handleDelete = async (projectId) => {
     if (!window.confirm('Are you sure you want to delete this project?')) {
@@ -84,6 +91,19 @@ function ProjectsListPage() {
     }
   };
 
+  const handleRequestSort = (field) => {
+    let newSortOrder;
+    if (sortBy === field) {
+      // Toggle order if same field
+      newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Default to ascending for new field
+      newSortOrder = 'asc';
+    }
+    setSortBy(field);
+    setSortOrder(newSortOrder);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -115,11 +135,35 @@ function ProjectsListPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Domain</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'domain'}
+                  direction={sortBy === 'domain' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('domain')}
+                >
+                  Domain
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'status'}
+                  direction={sortBy === 'status' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('status')}
+                >
+                  Status
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={sortBy === 'created_at'}
+                  direction={sortBy === 'created_at' ? sortOrder : 'asc'}
+                  onClick={() => handleRequestSort('created_at')}
+                >
+                  Created
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Pages</TableCell>
               <TableCell align="right">Foreign Words</TableCell>
-              <TableCell align="right">Created</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
