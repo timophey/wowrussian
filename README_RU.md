@@ -68,7 +68,7 @@ docker-compose up -d
 
 #### 4. Откройте приложение
 
-- **Фронтенд:** http://localhost:3000
+- **Фронтенд:** http://localhost:3000 (настраивается через `FRONTEND_PORT` в `.env`)
 - **Бэкенд API:** http://localhost:8000
 - **Документация API:** http://localhost:8000/docs
 - **WebSocket:** `ws://localhost:8000/ws/projects/{project_id}`
@@ -113,7 +113,7 @@ npm install
 npm start
 ```
 
-Фронтенд будет доступен по адресу: http://localhost:3000
+Фронтенд будет доступен по адресу: http://localhost:3000 (или порт, указанный в `FRONTEND_PORT`)
 
 ---
 
@@ -286,7 +286,7 @@ ws://localhost:8000/ws/projects/{project_id}
 | `CRAWLER_USER_AGENT` | User-Agent для краулера | `WowRussianBot/1.0` |
 | `CRAWLER_TIMEOUT` | Таймаут запросов (секунды) | `30` |
 | `CRAWLER_MAX_PAGES` | Максимальное количество страниц для обхода | `1000` |
-| `ALLOWED_ORIGINS` | Разрешенные CORS origins | `["http://localhost:3000","http://localhost:8000"]` |
+| `ALLOWED_ORIGINS` | Разрешенные CORS origins (должно включать порт из `FRONTEND_PORT`) | `["http://localhost:3000","http://localhost:8000"]` |
 
 ### Примеры URL подключения к БД
 

@@ -78,8 +78,8 @@ docker-compose up -d
 ```
 
 4. Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
+   - Frontend: http://localhost:3000 (configurable via `FRONTEND_PORT` in `.env`)
+   - Backend API: http://localhost:8000
 - API docs: http://localhost:8000/docs
 
 ### Using MySQL (Alternative)
@@ -103,7 +103,7 @@ docker-compose up -d
 docker-compose up -d
 ```
 
-2. Access the application at http://localhost:3000
+2. Access the application at http://localhost:3000 (or the port set in `FRONTEND_PORT`)
 
 ### Production Deployment
 
@@ -130,8 +130,8 @@ docker-compose up -d
 ```
 
 5. Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
+   - Frontend: http://localhost:3000 (configurable via `FRONTEND_PORT`)
+   - Backend API: http://localhost:8000
 - API docs: http://localhost:8000/docs
 
 ### Development Setup

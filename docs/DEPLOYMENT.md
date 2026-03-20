@@ -45,11 +45,23 @@ nano .env
 ```
 
 Update the following variables:
+
+**Frontend Port** (optional, default: 3000):
+```env
+FRONTEND_PORT=3000
+```
+
+**Backend & CORS**:
 ```env
 DEBUG=False
 SECRET_KEY=your-very-secure-secret-key-here
-ALLOWED_ORIGINS=https://yourdomain.com
+# IMPORTANT: If you change FRONTEND_PORT, also update ALLOWED_ORIGINS accordingly
+ALLOWED_ORIGINS=["https://yourdomain.com","http://localhost:3000"]
 ```
+
+**Note on CORS**: `ALLOWED_ORIGINS` must include:
+- Your production domain (e.g., `https://yourdomain.com`)
+- The frontend URL with the port specified in `FRONTEND_PORT` for local development (e.g., `http://localhost:3000`)
 
 ### 3. Create Storage Directories
 
