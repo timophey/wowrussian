@@ -12,7 +12,6 @@ RUN npm ci
 # Copy source code (only if not in .dockerignore)
 COPY src/ ./src/
 COPY public/ ./public/
-COPY .env* ./
 COPY nginx.conf ./
 
 # Build the app
