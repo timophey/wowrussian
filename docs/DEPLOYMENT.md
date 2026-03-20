@@ -83,16 +83,97 @@ docker-compose up -d --build
 - Login to CloudPanel dashboard
 - Click "Sites" → "Add Site"
 - Enter your domain name
-- Select "Docker" as the stack type
+- **Select "Nginx" as the stack type** (NOT "Docker")
 - Set document root to `/home/cloudpanel/domains/yourdomain.com/wowrussian/frontend/build` (after build)
 
 ### 2. Configure Nginx
 
-CloudPanel will create an nginx configuration. You may need to adjust it:
+CloudPanel will create an nginx configuration. Replace it with the following:
 
 **Location for config:** `/etc/nginx/conf.d/yourdomain.com.conf`
 
-Add proxy configuration for API and WebSocket:
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name yourdomain.com;
+
+    # SSL certificates (CloudPanel manages these)
+    ssl_certificate /etc/ssl/yourdomain.crt;
+    ssl_certificate_key /etc/ssl/yourdomain.key;
+
+    # Redirect HTTP to HTTPS
+    if ($scheme != "https") {
+        rewrite ^ https://$host$request_uri permanent;
+    }
+
+    # Let's encrypt
+    location ~ /.well-known {
+        auth_basic off;
+        allow all;
+    }
+
+    # Proxy frontend (React app) to Docker container
+    location / {
+        proxy_pass http://127.0.0.1:3000;  # Use your FRONTEND_PORT
+        proxy_http_version 1.1;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass_request_headers on;
+        proxy_connect_timeout 900;
+        proxy_send_timeout 900;
+        proxy_read_timeout 900;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+        proxy_temp_file_write_size 256k;
+        
+        # CORS and caching
+        add_header Access-Control-Allow-Origin "*" always;
+        expires max;
+    }
+
+    # Proxy API requests to backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy WebSocket connections
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    access_log /var/log/nginx/yourdomain.com.access.log;
+    error_log /var/log/nginx/yourdomain.com.error.log;
+}
+```
+
+**Important:**
+- Replace `3000` with your `FRONTEND_PORT` from `.env`
+- The `document root` setting from CloudPanel is ignored - all requests go through proxy
 
 ```nginx
 server {
