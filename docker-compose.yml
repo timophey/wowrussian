@@ -4,8 +4,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: wowrussian_redis
-    ports:
-      - "6379:6379"
+    # Ports are not exposed to host - only accessible within Docker network
+    # Uncomment if you need external access:
+    # ports:
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -22,8 +24,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-wowrussian}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Ports are not exposed to host - only accessible within Docker network
+    # Uncomment if you need external access (e.g., for local development tools):
+    # ports:
+    #   - "5432:5432"
     networks:
       - wowrussian_network
     healthcheck:
@@ -43,8 +47,10 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-wowrussian_password}
     volumes:
       - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    # Ports are not exposed to host - only accessible within Docker network
+    # Uncomment if you need external access (e.g., for local development tools):
+    # ports:
+    #   - "3306:3306"
     networks:
       - wowrussian_network
     healthcheck:
