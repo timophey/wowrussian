@@ -219,7 +219,7 @@ tar -czf /backup/path/storage-$(date +%Y%m%d).tar.gz /home/cloudpanel/domains/yo
    ```
 
 2. **Port conflicts**:
-   Ensure ports 80, 443, 8000 are not used by other services.
+   The application uses internal Docker networking for databases and Redis (ports 5432, 3306, 6379 are not exposed to host). Only ports 80, 443, 8000, and `${FRONTEND_PORT}` need to be free on the host.
 
 3. **Storage full**:
    Monitor disk usage: `df -h`
