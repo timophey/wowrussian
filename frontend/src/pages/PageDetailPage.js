@@ -25,10 +25,12 @@ import {
 } from '@mui/material';
 import { ArrowBack, Visibility, Code } from '@mui/icons-material';
 import { pageApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 function PageDetailPage() {
   const { t } = useTranslation();
   const { projectId, pageId } = useParams();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,8 @@ function PageDetailPage() {
 
   const fetchPage = async () => {
     try {
-      const res = await pageApi.get(projectId, pageId);
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+      const res = await pageApi.get(projectId, pageId, guestToken);
       setPage(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || t('errors.failedToLoad'));
@@ -94,7 +97,8 @@ function PageDetailPage() {
 
   const handleViewHtml = async () => {
     try {
-      const res = await pageApi.getHtml(projectId, pageId);
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+      const res = await pageApi.getHtml(projectId, pageId, guestToken);
       setHtmlContent(res.data.html);
       setHtmlDialogOpen(true);
     } catch (err) {
@@ -104,7 +108,8 @@ function PageDetailPage() {
 
   const handleViewText = async () => {
     try {
-      const res = await pageApi.getText(projectId, pageId);
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+      const res = await pageApi.getText(projectId, pageId, guestToken);
       setTextContent(res.data.text);
       setTextDialogOpen(true);
     } catch (err) {

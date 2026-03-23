@@ -1,5 +1,5 @@
-from typing import Annotated, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated, Dict, Any, Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
@@ -8,7 +8,10 @@ from app.models.project import Project, ProjectStatus
 from app.models.page import Page, PageStatus
 from app.models.foreign_word import ForeignWord
 from app.models.user import User
+from app.models.guest_session import GuestSession
 from app.utils.db import safe_scalar
+from app.api.auth import get_optional_user
+from sqlalchemy import update
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -16,14 +19,79 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @router.get("/{project_id}")
 async def get_project_stats(
     project_id: int,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
 ) -> Dict[str, Any]:
     """Get detailed statistics for a project."""
-    # Check project exists
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    # Verify project access
+    # Try to get authenticated user first
+    token = None
+    # We need to extract token from request manually since we're not using Depends
+    from fastapi.security import OAuth2PasswordBearer
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+    try:
+        token = await oauth2_scheme(request)
+    except:
+        pass
+
+    user = await get_optional_user(token, db) if token else None
+
+    if user:
+        # Authenticated user: check if project belongs to them
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+    else:
+        # No authenticated user, check guest session
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                # Check if project belongs to this guest session
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == project_id,
+                        Project.user_id == 1,
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=404, detail="Project not found")
+                # Update guest session activity
+                await db.execute(
+                    update(GuestSession)
+                    .where(GuestSession.id == guest_session.id)
+                    .values(last_activity=func.now())
+                )
+                await db.commit()
+            else:
+                # Invalid guest token
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid guest session"
+                )
+        else:
+            # No credentials at all - only allow access to default user's public projects
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
     
     # Page status distribution
     status_counts = await db.execute(

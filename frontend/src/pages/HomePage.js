@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { Visibility, Person, Logout } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi, projectApi } from '../services/api';
+import { authApi, projectApi, guestApi } from '../services/api';
 
 function HomePage() {
   const { t } = useTranslation();
@@ -27,7 +27,31 @@ function HomePage() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [guestSessionToken, setGuestSessionToken] = useState(null);
   const navigate = useNavigate();
+
+  // Initialize guest session for unauthenticated users
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const existingToken = localStorage.getItem('guest_session_token');
+      if (existingToken) {
+        setGuestSessionToken(existingToken);
+      } else {
+        createGuestSession();
+      }
+    }
+  }, [isAuthenticated]);
+
+  const createGuestSession = async () => {
+    try {
+      const response = await guestApi.createSession();
+      const token = response.data.session_token;
+      localStorage.setItem('guest_session_token', token);
+      setGuestSessionToken(token);
+    } catch (err) {
+      console.error('Failed to create guest session:', err);
+    }
+  };
 
   const validateUrl = (url) => {
     try {
@@ -63,7 +87,9 @@ function HomePage() {
 
     setLoading(true);
     try {
-      const response = await projectApi.create(url);
+      // Use guest session token if not authenticated
+      const token = isAuthenticated ? null : guestSessionToken;
+      const response = await projectApi.create(url, token);
       const projectId = response.data.id;
       navigate(`/project/${projectId}`);
     } catch (err) {

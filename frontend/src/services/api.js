@@ -57,26 +57,56 @@ api.interceptors.response.use(
 
 // Project API
 export const projectApi = {
-  create: (url) => api.post('/projects', { url }),
+  create: (url, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.post('/projects', { url }, { params });
+  },
   list: (params = {}) => api.get('/projects', { params }),
-  get: (id) => api.get(`/projects/${id}`),
-  delete: (id) => api.delete(`/projects/${id}`),
-  stop: (id) => api.post(`/projects/${id}/stop`),
-  start: (id) => api.post(`/projects/${id}/start`),
-  clearPages: (id) => api.delete(`/projects/${id}/pages`),
+  get: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/${id}`, { params });
+  },
+  delete: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.delete(`/projects/${id}`, { params });
+  },
+  stop: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.post(`/projects/${id}/stop`, {}, { params });
+  },
+  start: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.post(`/projects/${id}/start`, {}, { params });
+  },
+  clearPages: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.delete(`/projects/${id}/pages`, { params });
+  },
 };
 
 // Page API
 export const pageApi = {
   list: (projectId, params = {}) => api.get(`/projects/${projectId}/pages`, { params }),
-  get: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}`),
-  getHtml: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}/html`),
-  getText: (projectId, pageId) => api.get(`/projects/${projectId}/pages/${pageId}/text`),
+  get: (projectId, pageId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/${projectId}/pages/${pageId}`, { params });
+  },
+  getHtml: (projectId, pageId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/${projectId}/pages/${pageId}/html`, { params });
+  },
+  getText: (projectId, pageId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/${projectId}/pages/${pageId}/text`, { params });
+  },
 };
 
 // Stats API
 export const statsApi = {
-  get: (projectId) => api.get(`/stats/${projectId}`),
+  get: (projectId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/stats/${projectId}`, { params });
+  },
 };
 
 // Auth API
@@ -101,6 +131,12 @@ export const adminApi = {
   listUsers: (adminKey) => api.get('/admin/users', { params: { admin_key: adminKey } }),
   createUser: (email, password, adminKey) => api.post('/admin/users', { email, password }, { params: { admin_key: adminKey } }),
   deleteUser: (userId, adminKey) => api.delete(`/admin/users/${userId}`, { params: { admin_key: adminKey } }),
+};
+
+// Guest Session API
+export const guestApi = {
+  createSession: () => api.post('/guest/sessions'),
+  validateSession: (token) => api.get(`/guest/sessions/${token}`),
 };
 
 export default api;

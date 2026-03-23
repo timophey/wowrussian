@@ -29,6 +29,7 @@ import {
 import { Visibility, Stop, ArrowBack, PlayArrow, Delete } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useAuth } from '../contexts/AuthContext';
 
 const STATUS_COLORS = {
   pending: 'default',
@@ -46,6 +47,7 @@ const STATUS_COLORS = {
 function ProjectPage() {
   const { t } = useTranslation();
   const { id } = useParams();
+  const { isAuthenticated } = useAuth();
 
   // Language code to name mapping (from translations)
   const getLanguageName = (code) => {
@@ -85,6 +87,12 @@ function ProjectPage() {
     }
   };
   const navigate = useNavigate();
+  
+  // Helper to get guest session token when not authenticated
+  const getGuestToken = () => {
+    return !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+  };
+  
   const [project, setProject] = useState(null);
   const [pages, setPages] = useState([]);
   const [stats, setStats] = useState(null);
@@ -117,10 +125,12 @@ function ProjectPage() {
 
     fetchInProgress.current = true;
     try {
+      // Use guest session token if not authenticated
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
       const [projectRes, pagesRes, statsRes] = await Promise.all([
-        projectApi.get(id),
-        pageApi.list(id, { sort_by: sortBy, sort_order: sortOrder }),
-        statsApi.get(id),
+        projectApi.get(id, guestToken),
+        pageApi.list(id, { sort_by: sortBy, sort_order: sortOrder, guest_session_token: guestToken }),
+        statsApi.get(id, guestToken),
       ]);
       // Only update state if this is still the current project
       if (mountedRef.current && currentIdRef.current === id) {
@@ -139,7 +149,7 @@ function ProjectPage() {
         setLoading(false);
       }
     }
-  }, [id, sortBy, sortOrder, t]);
+  }, [id, sortBy, sortOrder, t, isAuthenticated]);
 
   useEffect(() => {
     setLoading(true);
@@ -233,7 +243,8 @@ function ProjectPage() {
 
   const handleStop = async () => {
     try {
-      await projectApi.stop(id);
+      const guestToken = getGuestToken();
+      await projectApi.stop(id, guestToken);
       // Optimistically update status
       setProject(prev => prev ? { ...prev, status: 'stopped' } : null);
     } catch (err) {
@@ -243,7 +254,8 @@ function ProjectPage() {
 
   const handleStart = async () => {
     try {
-      await projectApi.start(id);
+      const guestToken = getGuestToken();
+      await projectApi.start(id, guestToken);
       // Optimistically update status to crawling
       setProject(prev => prev ? { ...prev, status: 'crawling' } : null);
       // Clear pages list as they will be re-crawled
@@ -256,7 +268,8 @@ function ProjectPage() {
 
   const handleClear = async () => {
     try {
-      await projectApi.clearPages(id);
+      const guestToken = getGuestToken();
+      await projectApi.clearPages(id, guestToken);
       // Optimistically clear pages and reset stats
       setPages([]);
       setStats({ total_pages: 0, foreign_words_count: 0, unique_foreign_words: 0, foreign_percentage: 0 });

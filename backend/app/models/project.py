@@ -24,6 +24,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    guest_session_id = Column(Integer, ForeignKey("guest_sessions.id"), nullable=True)
     domain = Column(String, nullable=False, index=True)
     base_url = Column(String, nullable=False)
     status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.PENDING, nullable=False)
@@ -33,5 +34,6 @@ class Project(Base):
 
     # Relationships
     owner = relationship("User", back_populates="projects")
+    guest_session = relationship("GuestSession", back_populates="projects")
     pages = relationship("Page", back_populates="project", cascade="all, delete-orphan")
     crawl_queue = relationship("CrawlQueue", back_populates="project", cascade="all, delete-orphan")

@@ -135,3 +135,16 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_optional_user(
+    token: str | None,
+    db: AsyncSession
+) -> User | None:
+    """Get current user if token is valid, otherwise return None."""
+    if not token:
+        return None
+    try:
+        return await get_current_user(token, db)
+    except HTTPException:
+        return None

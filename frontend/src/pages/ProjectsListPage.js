@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -23,8 +23,9 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  AlertTitle,
 } from '@mui/material';
-import { Visibility, Delete, Add, Person } from '@mui/icons-material';
+import { Visibility, Delete, Add, Person, ArrowBack } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { projectApi } from '../services/api';
 
@@ -42,6 +43,7 @@ function ProjectsListPage() {
   const { t } = useTranslation();
   const { isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,10 +55,38 @@ function ProjectsListPage() {
   const [authError, setAuthError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [viewingUserId, setViewingUserId] = useState(null);
+
+  // Check if we're viewing projects for a specific user (from admin panel)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get('user_id');
+    if (userId) {
+      setViewingUserId(parseInt(userId, 10));
+    }
+  }, [location.search]);
 
   const fetchProjects = async (params = {}) => {
     try {
-      const res = await projectApi.list(params);
+      // Determine authentication method
+      let requestParams = params;
+      if (viewingUserId) {
+        // Admin viewing user's projects - use admin key
+        const adminKey = localStorage.getItem('admin_key');
+        requestParams = {
+          ...params,
+          user_id: viewingUserId,
+          admin_key: adminKey
+        };
+      } else if (!isAuthenticated) {
+        // Guest user - use guest session token
+        const guestToken = localStorage.getItem('guest_session_token');
+        requestParams = {
+          ...params,
+          guest_session_token: guestToken
+        };
+      }
+      const res = await projectApi.list(requestParams);
       setProjects(res.data);
     } catch (err) {
       if (err.response?.status === 401) {
@@ -75,14 +105,15 @@ function ProjectsListPage() {
       sort_order: sortOrder
     };
     fetchProjects(params);
-  }, [sortBy, sortOrder]);
+  }, [sortBy, sortOrder, viewingUserId]);
 
   const handleDelete = async (projectId) => {
     if (!window.confirm(t('projects.confirmDelete'))) {
       return;
     }
     try {
-      await projectApi.delete(projectId);
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+      await projectApi.delete(projectId, guestToken);
       setProjects(projects.filter((p) => p.id !== projectId));
     } catch (err) {
       setError(t('errors.failedToDeleteProject'));
@@ -168,92 +199,117 @@ function ProjectsListPage() {
     );
   }
 
-  // If not authenticated, show login prompt
-  if (!isAuthenticated) {
-    return (
-      <>
-        <Container maxWidth="sm" sx={{ mt: 8 }}>
-          <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-            <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              {t('projects.loginRequired')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              {t('projects.loginToViewProjects')}
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<Person />}
-              onClick={() => openAuthDialog('login')}
-            >
-              {t('home.login')}
-            </Button>
-          </Paper>
-        </Container>
+   // If not authenticated and not viewing admin's user projects, show login prompt
+   if (!isAuthenticated && !viewingUserId) {
+     return (
+       <>
+         <Container maxWidth="sm" sx={{ mt: 8 }}>
+           <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+             <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+             <Typography variant="h5" gutterBottom>
+               {t('projects.loginRequired')}
+             </Typography>
+             <Typography variant="body2" color="text.secondary" paragraph>
+               {t('projects.loginToViewProjects')}
+             </Typography>
+             <Button
+               variant="contained"
+               size="large"
+               startIcon={<Person />}
+               onClick={() => openAuthDialog('login')}
+             >
+               {t('home.login')}
+             </Button>
+           </Paper>
+         </Container>
 
-        {/* Auth Dialog */}
-        <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>
-            {authMode === 'login' ? t('home.login') : t('home.register')}
-          </DialogTitle>
-          <form onSubmit={handleAuthSubmit}>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label={t('home.email')}
-                type="email"
-                fullWidth
-                variant="outlined"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                sx={{ mb: 2 }}
-                required
-              />
-              <TextField
-                margin="dense"
-                label={t('home.password')}
-                type="password"
-                fullWidth
-                variant="outlined"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                inputProps={{ minLength: 8 }}
-              />
-              {authError && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {authError}
-                </Alert>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setAuthDialogOpen(false)}>
-                {t('dialogs.cancel')}
-              </Button>
-              <Button type="submit" variant="contained" disabled={authLoading}>
-                {authLoading ? <CircularProgress size={20} /> : (authMode === 'login' ? t('home.login') : t('home.register'))}
-              </Button>
-            </DialogActions>
-          </form>
-        </Dialog>
-      </>
-    );
-  }
+         {/* Auth Dialog */}
+         <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)} maxWidth="xs" fullWidth>
+           <DialogTitle>
+             {authMode === 'login' ? t('home.login') : t('home.register')}
+           </DialogTitle>
+           <form onSubmit={handleAuthSubmit}>
+             <DialogContent>
+               <TextField
+                 autoFocus
+                 margin="dense"
+                 label={t('home.email')}
+                 type="email"
+                 fullWidth
+                 variant="outlined"
+                 value={email}
+                 onChange={(e) => setEmail(e.target.value)}
+                 sx={{ mb: 2 }}
+                 required
+               />
+               <TextField
+                 margin="dense"
+                 label={t('home.password')}
+                 type="password"
+                 fullWidth
+                 variant="outlined"
+                 value={password}
+                 onChange={(e) => setPassword(e.target.value)}
+                 required
+                 inputProps={{ minLength: 8 }}
+               />
+               {authError && (
+                 <Alert severity="error" sx={{ mt: 2 }}>
+                   {authError}
+                 </Alert>
+               )}
+             </DialogContent>
+             <DialogActions>
+               <Button onClick={() => setAuthDialogOpen(false)}>
+                 {t('dialogs.cancel')}
+               </Button>
+               <Button type="submit" variant="contained" disabled={authLoading}>
+                 {authLoading ? <CircularProgress size={20} /> : (authMode === 'login' ? t('home.login') : t('home.register'))}
+               </Button>
+             </DialogActions>
+           </form>
+         </Dialog>
+       </>
+     );
+   }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">{t('projects.title')}</Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => navigate('/')}
+      {viewingUserId && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/projects')}
+            >
+              {t('admin.backToProjects')}
+            </Button>
+          }
         >
-          {t('projects.newAnalysis')}
-        </Button>
-      </Box>
+          <AlertTitle>{t('admin.projectsForUser')} #{viewingUserId}</AlertTitle>
+          {t('admin.projectsForUser')} #{viewingUserId}
+        </Alert>
+      )}
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 3 }}>
+          <Typography variant="h4">
+            {viewingUserId ? `${t('admin.userProjects')} #${viewingUserId}` : t('projects.title')}
+          </Typography>
+          {!viewingUserId && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/')}
+            >
+              {t('projects.newAnalysis')}
+            </Button>
+          )}
+        </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -261,94 +317,95 @@ function ProjectsListPage() {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <TableSortLabel
-                  active={sortBy === 'domain'}
-                  direction={sortBy === 'domain' ? sortOrder : 'asc'}
-                  onClick={() => handleRequestSort('domain')}
-                >
-                  {t('projects.domain')}
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortBy === 'status'}
-                  direction={sortBy === 'status' ? sortOrder : 'asc'}
-                  onClick={() => handleRequestSort('status')}
-                >
-                  {t('projects.status')}
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align="right">
-                <TableSortLabel
-                  active={sortBy === 'created_at'}
-                  direction={sortBy === 'created_at' ? sortOrder : 'asc'}
-                  onClick={() => handleRequestSort('created_at')}
-                >
-                  {t('projects.created')}
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align="right">{t('projects.pages')}</TableCell>
-              <TableCell align="right">{t('projects.foreignWords')}</TableCell>
-              <TableCell align="center">{t('projects.actions')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {projects.map((project) => (
-              <TableRow
-                key={project.id}
-                hover
-                sx={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/project/${project.id}`)}
-              >
-                <TableCell>{project.domain}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={getStatusLabel(project.status)}
-                    size="small"
-                    color={STATUS_COLORS[project.status] || 'default'}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {new Date(project.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
-                <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
-                <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate(`/project/${project.id}`)}
-                    title={t('projects.view')}
-                  >
-                    <Visibility fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(project.id)}
-                    title={t('projects.delete')}
-                    color="error"
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-            {projects.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  {t('projects.noProjects')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Container>
-  );
+       <TableContainer component={Paper}>
+         <Table>
+           <TableHead>
+             <TableRow>
+               <TableCell>
+                 <TableSortLabel
+                   active={sortBy === 'domain'}
+                   direction={sortBy === 'domain' ? sortOrder : 'asc'}
+                   onClick={() => handleRequestSort('domain')}
+                 >
+                   {t('projects.domain')}
+                 </TableSortLabel>
+               </TableCell>
+               <TableCell>
+                 <TableSortLabel
+                   active={sortBy === 'status'}
+                   direction={sortBy === 'status' ? sortOrder : 'asc'}
+                   onClick={() => handleRequestSort('status')}
+                 >
+                   {t('projects.status')}
+                 </TableSortLabel>
+               </TableCell>
+               <TableCell align="right">
+                 <TableSortLabel
+                   active={sortBy === 'created_at'}
+                   direction={sortBy === 'created_at' ? sortOrder : 'asc'}
+                   onClick={() => handleRequestSort('created_at')}
+                 >
+                   {t('projects.created')}
+                 </TableSortLabel>
+               </TableCell>
+               <TableCell align="right">{t('projects.pages')}</TableCell>
+               <TableCell align="right">{t('projects.foreignWords')}</TableCell>
+               <TableCell align="center">{t('projects.actions')}</TableCell>
+             </TableRow>
+           </TableHead>
+           <TableBody>
+             {projects.map((project) => (
+               <TableRow
+                 key={project.id}
+                 hover
+                 sx={{ cursor: 'pointer' }}
+                 onClick={() => navigate(`/project/${project.id}`)}
+               >
+                 <TableCell>{project.domain}</TableCell>
+                 <TableCell>
+                   <Chip
+                     label={getStatusLabel(project.status)}
+                     size="small"
+                     color={STATUS_COLORS[project.status] || 'default'}
+                   />
+                 </TableCell>
+                 <TableCell align="right">
+                   {new Date(project.created_at).toLocaleDateString()}
+                 </TableCell>
+                 <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
+                 <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
+                 <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                   <IconButton
+                     size="small"
+                     onClick={() => navigate(`/project/${project.id}`)}
+                     title={t('projects.view')}
+                   >
+                     <Visibility fontSize="small" />
+                   </IconButton>
+                   <IconButton
+                     size="small"
+                     onClick={() => handleDelete(project.id)}
+                     title={t('projects.delete')}
+                     color="error"
+                   >
+                     <Delete fontSize="small" />
+                   </IconButton>
+                 </TableCell>
+               </TableRow>
+             ))}
+             {projects.length === 0 && (
+               <TableRow>
+                 <TableCell colSpan={6} align="center">
+                   {t('projects.noProjects')}
+                 </TableCell>
+               </TableRow>
+             )}
+           </TableBody>
+         </Table>
+       </TableContainer>
+       </Box>
+     </Container>
+   );
 }
 
 export default ProjectsListPage;

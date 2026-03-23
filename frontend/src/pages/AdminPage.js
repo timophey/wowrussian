@@ -155,33 +155,34 @@ function AdminPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">{t('admin.adminPanel')}</Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          <Button
-            variant="outlined"
-            startIcon={<Add />}
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            {t('admin.createUser')}
-          </Button>
-          <Button
-            variant="text"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/projects')}
-          >
-            {t('admin.backToProjects')}
-          </Button>
-          <Button
-            variant="text"
-            color="error"
-            onClick={handleLogout}
-          >
-            {t('admin.logout')}
-          </Button>
+    <Container maxWidth="lg" sx={{ mt: 8 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 3 }}>
+          <Typography variant="h4">{t('admin.adminPanel')}</Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              {t('admin.createUser')}
+            </Button>
+            <Button
+              variant="text"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/projects')}
+            >
+              {t('admin.backToProjects')}
+            </Button>
+            <Button
+              variant="text"
+              color="error"
+              onClick={handleLogout}
+            >
+              {t('admin.logout')}
+            </Button>
+          </Box>
         </Box>
-      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -210,17 +211,24 @@ function AdminPage() {
                   <TableCell>{user.id}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteUser(user.id)}
-                      color="error"
-                      disabled={user.id === 1}
-                      title={user.id === 1 ? t('admin.cannotDeletePrimary') : t('admin.deleteUser')}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+                   <TableCell align="right">
+                     <IconButton
+                       size="small"
+                       onClick={() => navigate(`/projects?user_id=${user.id}`)}
+                       title={t('admin.viewUserProjects')}
+                     >
+                       <Visibility fontSize="small" />
+                     </IconButton>
+                     <IconButton
+                       size="small"
+                       onClick={() => handleDeleteUser(user.id)}
+                       color="error"
+                       disabled={user.id === 1}
+                       title={user.id === 1 ? t('admin.cannotDeletePrimary') : t('admin.deleteUser')}
+                     >
+                       <Delete fontSize="small" />
+                     </IconButton>
+                   </TableCell>
                 </TableRow>
               ))}
               {users.length === 0 && (
@@ -233,9 +241,11 @@ function AdminPage() {
             </TableBody>
           </Table>
         </TableContainer>
-      )}
+       )}
 
-      {/* Create User Dialog */}
+       </Box>
+
+       {/* Create User Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
         <DialogTitle>{t('admin.createNewUser')}</DialogTitle>
         <form onSubmit={handleCreateUser}>
