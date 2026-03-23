@@ -52,6 +52,21 @@ log_error() {
     log "ERROR" "${RED}$1${NC}"
 }
 
+# Load environment variables from .env file
+load_env() {
+    log_info "Loading environment from $ENV_FILE..."
+    
+    if [[ -f "$ENV_FILE" ]]; then
+        # Export all variables from .env file
+        set -a
+        source "$ENV_FILE"
+        set +a
+        log_success "Environment loaded"
+    else
+        log_warning "$ENV_FILE not found, using defaults"
+    fi
+}
+
 # Check if running as root or with appropriate permissions
 check_permissions() {
     if [[ $EUID -eq 0 ]]; then
@@ -312,6 +327,9 @@ main() {
         log_error "Cannot change to deployment directory: $DEPLOY_DIR"
         exit 1
     }
+    
+    # Load environment variables
+    load_env
     
     # Execute deployment steps
     pre_deploy_check

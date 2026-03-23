@@ -31,6 +31,14 @@ echo "Deploy directory: $DEPLOY_DIR"
 # Change to app directory
 cd "$DEPLOY_DIR" || { echo "ERROR: Cannot change to $DEPLOY_DIR"; exit 1; }
 
+# Load .env file if exists
+if [[ -f ".env" ]]; then
+    set -a
+    source ".env"
+    set +a
+    echo "Loaded environment from .env"
+fi
+
 # Pull latest code
 echo "Pulling latest code..."
 if [[ -d ".git" ]]; then
@@ -68,4 +76,4 @@ docker image prune -a -f
 
 echo ""
 echo "Deployment complete!"
-echo "Check logs: docker-compose logs -f"
+echo "Check logs: $DOCKER_COMPOSE logs -f"
