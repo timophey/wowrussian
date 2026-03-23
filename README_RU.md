@@ -94,8 +94,8 @@ source venv/bin/activate
 # Установка зависимостей
 pip install -r requirements.txt
 
-# Запуск миграций базы данных
-alembic upgrade head
+# Запуск сервера разработки (миграции выполняются автоматически)
+uvicorn app.main:app --reload
 
 # Запуск сервера разработки
 uvicorn app.main:app --reload
@@ -134,7 +134,7 @@ npm start
 1. Убедитесь, что нужный драйвер раскомментирован в `backend/requirements.txt`
 2. Измените `DATABASE_URL` в файле `.env`
 3. Для Docker: раскомментируйте соответствующую службу БД в `docker-compose.yml`
-4. Выполните миграции: `alembic upgrade head`
+4. **Миграции выполняются автоматически при запуске** — дополнительных действий не требуется
 
 ---
 
@@ -327,6 +327,8 @@ pytest --cov=app --cov-report=html
 
 ## 🗃️ Миграции базы данных
 
+**Важно:** Миграции выполняются автоматически при запуске приложения.
+
 ### Создание новой миграции
 
 ```bash
@@ -334,15 +336,15 @@ cd backend
 alembic revision --autogenerate -m "Описание миграции"
 ```
 
-### Применение миграций
+### Ручное управление миграциями (для отладки)
 
+Применить миграции вручную:
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-### Откат миграции
-
+Откатить последнюю миграцию:
 ```bash
 cd backend
 alembic downgrade -1

@@ -49,7 +49,7 @@ The application supports three database backends:
 1. Install the appropriate driver in `backend/requirements.txt` (already included)
 2. Set `DATABASE_URL` environment variable to your chosen database
 3. For Docker deployments, uncomment the database service in `docker-compose.yml`
-4. Run migrations: `alembic upgrade head`
+4. **Migrations run automatically on startup** - no manual step required
 
 ## Quick Start
 
@@ -143,10 +143,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Run database migrations
-alembic upgrade head
-
-# Start development server
+# Start development server (migrations run automatically)
 uvicorn app.main:app --reload
 ```
 
@@ -253,9 +250,20 @@ pytest
 
 ### Database Migrations
 
+**Note:** Migrations run automatically on application startup.
+
+To manually run migrations (e.g., for debugging or special cases):
+
 ```bash
 cd backend
 alembic upgrade head
+```
+
+To create a new migration after changing models:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "Description of changes"
 ```
 
 ### Adding New Features

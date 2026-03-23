@@ -371,10 +371,8 @@ To update the application:
    docker-compose pull
    docker-compose up -d --build
    ```
-3. Run migrations if needed:
-   ```bash
-   docker-compose exec backend alembic upgrade head
-   ```
+
+**Note:** Database migrations run automatically on startup. No manual migration step is required.
 
 ## Support
 

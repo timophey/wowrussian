@@ -95,9 +95,50 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    """Initialize database tables."""
-    async with engine.begin() as conn:
-        # Enable WAL mode for SQLite for better concurrency
-        if database_url.startswith("sqlite+aiosqlite://"):
-            await conn.execute(text("PRAGMA journal_mode=WAL"))
-        await conn.run_sync(Base.metadata.create_all)
+    """Initialize database by running Alembic migrations."""
+    from alembic.config import Config
+    from alembic import command
+    from sqlalchemy import create_engine, inspect
+    
+    # Ensure data directory exists for SQLite
+    if database_url.startswith("sqlite+aiosqlite://"):
+        db_path = database_url.replace("sqlite+aiosqlite://", "")
+        if not db_path.startswith(':'):  # Not in-memory
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    
+    # Enable WAL mode for SQLite for better concurrency (before migrations)
+    if database_url.startswith("sqlite+aiosqlite://"):
+        sync_url = database_url.replace('+aiosqlite', '')
+        sync_engine = create_engine(sync_url)
+        with sync_engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.commit()
+        sync_engine.dispose()
+    
+    # Prepare Alembic configuration
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '..', '..', 'alembic.ini'))
+    sync_url = database_url.replace('+asyncpg', '').replace('+aiomysql', '').replace('+aiosqlite', '')
+    alembic_cfg.set_main_option('sqlalchemy.url', sync_url)
+    
+    # Check if database is already initialized with schema but missing alembic_version
+    sync_engine = create_engine(sync_url)
+    inspector = inspect(sync_engine)
+    existing_tables = inspector.get_table_names()
+    sync_engine.dispose()
+    
+    # If main tables exist but alembic_version doesn't, stamp current version
+    main_tables = ['users', 'projects', 'pages', 'foreign_words', 'russian_words', 'crawl_queue']
+    has_main_tables = any(table in existing_tables for table in main_tables)
+    has_alembic_version = 'alembic_version' in existing_tables
+    
+    if has_main_tables and not has_alembic_version:
+        print("Database schema exists but alembic_version not found. Stamping current version...")
+        command.stamp(alembic_cfg, 'head')
+        return
+    
+    # Run Alembic migrations normally
+    try:
+        command.upgrade(alembic_cfg, 'head')
+    except Exception as e:
+        print(f"Migration error: {e}")
+        raise

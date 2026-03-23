@@ -1,6 +1,8 @@
 # Database Migration Guide
 
-This guide explains how to switch between different database backends (SQLite, PostgreSQL, MySQL) in the WowRussian Analyzer project.
+**Important:** Database migrations run automatically on application startup. You no longer need to manually run `alembic upgrade head` during normal deployment.
+
+This guide explains how to switch between different database backends (SQLite, PostgreSQL, MySQL) in the WowRussian Analyzer project, and covers advanced migration scenarios.
 
 ## Supported Databases
 
