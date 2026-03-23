@@ -23,19 +23,17 @@ function LanguageSwitcher() {
       <Tooltip title={i18n.language === 'ru' ? 'Switch to English' : 'Переключить на русский'}>
         <IconButton
           onClick={toggleLanguage}
-          color="primary"
           size="small"
           sx={{
             bgcolor: 'background.paper',
-            boxShadow: 2,
+            borderRadius: 1,
             '&:hover': {
               bgcolor: 'background.paper',
-              opacity: 0.9,
             },
           }}
         >
-          <LanguageIcon />
-          <Box component="span" sx={{ ml: 1, fontWeight: 'bold' }}>
+          <LanguageIcon fontSize="small" />
+          <Box component="span" sx={{ ml: 0.5, fontSize: '0.875rem' }}>
             {i18n.language === 'ru' ? 'EN' : 'RU'}
           </Box>
         </IconButton>
