@@ -439,7 +439,7 @@ async def _delete_page_completely(db: AsyncSession, page: Page, storage: FileSto
 
 
 async def _check_project_completion(project_id: int, db: AsyncSession):
-    """Check if all pages are processed and update project status."""
+    """Check if all pages are processed and crawl queue is empty."""
     # Count total pages
     total_pages = await safe_scalar(
         db,
@@ -464,8 +464,18 @@ async def _check_project_completion(project_id: int, db: AsyncSession):
         )
     )
     
-    if total_pages > 0 and (analyzed_pages + failed_pages) >= total_pages:
-        # All pages processed
+    # Count pending and processing queue items
+    pending_queue_items = await safe_scalar(
+        db,
+        select(func.count()).select_from(CrawlQueue).where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status.in_([QueueStatus.PENDING, QueueStatus.PROCESSING])
+        )
+    )
+    
+    # Only complete if all pages are processed AND no items in queue
+    if total_pages > 0 and (analyzed_pages + failed_pages) >= total_pages and (pending_queue_items or 0) == 0:
+        # All pages processed and queue is empty
         project = await safe_scalar(db, select(Project).where(Project.id == project_id))
         if project:
             if failed_pages > 0:
