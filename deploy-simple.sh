@@ -4,6 +4,13 @@
 
 set -e
 
+# Detect Docker Compose command (prefer docker compose v2)
+if docker compose version &>/dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    DOCKER_COMPOSE="docker-compose"
+fi
+
 echo "=== WowRussian Simple Deploy ==="
 date
 
@@ -34,14 +41,14 @@ fi
 
 # Stop containers
 echo "Stopping containers..."
-docker-compose down 2>/dev/null || true
+$DOCKER_COMPOSE down 2>/dev/null || true
 
 # Pull and rebuild
 echo "Pulling images..."
-docker-compose pull --ignore-pull-failures
+$DOCKER_COMPOSE pull --ignore-pull-failures
 
 echo "Building and starting..."
-docker-compose up -d --build
+$DOCKER_COMPOSE up -d --build
 
 # Wait a bit for containers to start
 sleep 10
@@ -49,7 +56,7 @@ sleep 10
 # Show status
 echo ""
 echo "=== Container Status ==="
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 # Cleanup old images
 echo ""

@@ -6,6 +6,13 @@
 
 set -e  # Exit on any error
 
+# Detect Docker Compose command (prefer docker compose v2)
+if docker compose version &>/dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    DOCKER_COMPOSE="docker-compose"
+fi
+
 # Configuration
 APP_NAME="WowRussian"
 DEPLOY_DIR="/home/cloudpanel/domains/yourdomain.com/wowrussian"
@@ -86,7 +93,7 @@ pre_deploy_check() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
+    if ! $DOCKER_COMPOSE version &>/dev/null; then
         log_error "Docker Compose is not installed or not in PATH"
         exit 1
     fi
@@ -181,8 +188,8 @@ git_pull() {
 stop_containers() {
     log_info "Stopping running containers..."
     
-    if docker-compose ps | grep -q "Up"; then
-        docker-compose down
+    if $DOCKER_COMPOSE ps | grep -q "Up"; then
+        $DOCKER_COMPOSE down
         log_success "Containers stopped"
     else
         log_info "No running containers found"
@@ -195,11 +202,11 @@ build_and_start() {
     
     # Pull latest base images
     log_info "Pulling latest base images..."
-    docker-compose pull --ignore-pull-failures || log_warning "Some images could not be pulled"
+    $DOCKER_COMPOSE pull --ignore-pull-failures || log_warning "Some images could not be pulled"
     
     # Build and start
     log_info "Building and starting services..."
-    if docker-compose up -d --build --remove-orphans; then
+    if $DOCKER_COMPOSE up -d --build --remove-orphans; then
         log_success "Containers built and started"
     else
         log_error "Failed to build/start containers"
@@ -223,7 +230,7 @@ wait_for_health() {
         
         if [[ $attempt -eq $max_attempts ]]; then
             log_error "Backend failed to become healthy after $max_attempts attempts"
-            docker-compose logs backend
+            $DOCKER_COMPOSE logs backend
             exit 1
         fi
         
@@ -283,7 +290,7 @@ show_summary() {
     echo "Log file: $LOG_FILE"
     echo ""
     echo "Running containers:"
-    docker-compose ps
+    $DOCKER_COMPOSE ps
     echo ""
     echo "Disk usage:"
     df -h . | tail -1
