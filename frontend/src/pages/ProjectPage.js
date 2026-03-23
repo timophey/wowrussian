@@ -172,6 +172,7 @@ function ProjectPage() {
           if (prev.some(p => p.id === page_id)) return prev;
           return [...prev, {
             id: page_id,
+            project_id: id,
             url: url,
             status: 'parsed', // After crawling, status is parsed
             foreign_words_count: 0,
