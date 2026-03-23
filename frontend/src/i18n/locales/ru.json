@@ -80,7 +80,10 @@
     "mainDictionary": "Основной Словарь",
     "fallbackDictionary": "Резервный Словарь",
     "unknown": "Неизвестно",
-    "truncated": "... (обрезано)"
+    "truncated": "... (обрезано)",
+    "totalWords": "Всего Слов",
+    "foreignWords": "Иностранных Слов",
+    "foreignPercent": "Иностранных %"
   },
   "classification": {
     "anglicism": "Англицизм",

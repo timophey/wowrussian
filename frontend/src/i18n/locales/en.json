@@ -80,7 +80,10 @@
     "mainDictionary": "Main Dictionary",
     "fallbackDictionary": "Fallback Dictionary",
     "unknown": "Unknown",
-    "truncated": "... (truncated)"
+    "truncated": "... (truncated)",
+    "totalWords": "Total Words",
+    "foreignWords": "Foreign Words",
+    "foreignPercent": "Foreign %"
   },
   "classification": {
     "anglicism": "Anglicism",
