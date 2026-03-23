@@ -81,10 +81,14 @@ export const statsApi = {
 
 // Auth API
 export const authApi = {
-  login: (email, password) => api.post('/auth/login', new URLSearchParams({
-    username: email,
-    password: password
-  })),  // OAuth2PasswordRequestForm expects form data
+  login: (email, password) => {
+    const data = new URLSearchParams();
+    data.append('username', email);
+    data.append('password', password);
+    return api.post('/auth/login', data, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+  },
   register: (email, password) => api.post('/auth/register', { email, password }),
 };
 
