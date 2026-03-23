@@ -79,9 +79,12 @@ export const statsApi = {
   get: (projectId) => api.get(`/stats/${projectId}`),
 };
 
-// Auth API (placeholder)
+// Auth API
 export const authApi = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
+  login: (email, password) => api.post('/auth/login', new URLSearchParams({
+    username: email,
+    password: password
+  })),  // OAuth2PasswordRequestForm expects form data
   register: (email, password) => api.post('/auth/register', { email, password }),
 };
 
