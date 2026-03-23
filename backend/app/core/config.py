@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     access_token_expire_minutes: int = Field(default=10080, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    admin_secret_key: str = Field(default="", env="ADMIN_SECRET_KEY")
 
     database_url: str = Field(default="sqlite+aiosqlite:///./data/app.db", env="DATABASE_URL")
     redis_url: str = Field(default="redis://redis:6379/0", env="REDIS_URL")

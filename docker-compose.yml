@@ -70,6 +70,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - STORAGE_PATH=/app/storage
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-admin-secret-change-this}
       - DEBUG=${DEBUG:-True}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["http://localhost:3000","http://localhost:8000"]}
     volumes:
@@ -100,6 +101,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - STORAGE_PATH=/app/storage
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-admin-secret-change-this}
       - DEBUG=${DEBUG:-True}
     volumes:
       - ./data:/app/data

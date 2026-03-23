@@ -129,7 +129,7 @@
     "close": "Закрыть",
     "htmlContent": "HTML Контент"
   },
-  "errors": {
+   "errors": {
     "failedToLoad": "Не удалось загрузить",
     "failedToLoadProjects": "Не удалось загрузить проекты",
     "failedToDeleteProject": "Не удалось удалить проект",
@@ -139,5 +139,31 @@
     "failedToLoadPageDetails": "Не удалось загрузить детали страницы",
     "failedToLoadHtml": "Не удалось загрузить HTML",
     "failedToLoadText": "Не удалось загрузить текст"
+  },
+  "admin": {
+    "adminPanel": "Панель Администратора",
+    "adminDescription": "Для доступа к панели администратора используйте секретный ключ.",
+    "adminKey": "Секретный Ключ Админа",
+    "login": "Войти",
+    "logout": "Выйти",
+    "backToProjects": "Назад к Проектам",
+    "userId": "ID",
+    "email": "Email",
+    "createdAt": "Создан",
+    "actions": "Действия",
+    "noUsers": "Пользователи не найдены",
+    "createUser": "Создать Пользователя",
+    "createNewUser": "Создать Нового Пользователя",
+    "email": "Email",
+    "password": "Пароль",
+    "create": "Создать",
+    "deleteUser": "Удалить Пользователя",
+    "cannotDeletePrimary": "Нельзя удалить основного админа",
+    "confirmDeleteUser": "Вы уверены, что хотите удалить этого пользователя? Это также удалит все его проекты.",
+    "failedToLoadUsers": "Не удалось загрузить пользователей",
+    "failedToCreateUser": "Не удалось создать пользователя",
+    "failedToDeleteUser": "Не удалось удалить пользователя",
+    "enterAdminKey": "Пожалуйста, введите секретный ключ",
+    "fillAllFields": "Пожалуйста, заполните все поля"
   }
 }

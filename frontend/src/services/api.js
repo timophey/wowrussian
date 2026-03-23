@@ -39,4 +39,11 @@ export const authApi = {
   register: (email, password) => api.post('/auth/register', { email, password }),
 };
 
+// Admin API
+export const adminApi = {
+  listUsers: (adminKey) => api.get('/admin/users', { params: { admin_key: adminKey } }),
+  createUser: (email, password, adminKey) => api.post('/admin/users', { email, password }, { params: { admin_key: adminKey } }),
+  deleteUser: (userId, adminKey) => api.delete(`/admin/users/${userId}`, { params: { admin_key: adminKey } }),
+};
+
 export default api;

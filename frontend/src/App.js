@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import ProjectPage from './pages/ProjectPage';
 import ProjectsListPage from './pages/ProjectsListPage';
 import PageDetailPage from './pages/PageDetailPage';
+import AdminPage from './pages/AdminPage';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import './i18n';
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/projects" element={<ProjectsListPage />} />
           <Route path="/project/:id" element={<ProjectPage />} />
           <Route path="/project/:projectId/page/:pageId" element={<PageDetailPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Container>
