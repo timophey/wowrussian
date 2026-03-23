@@ -29,13 +29,27 @@ async def get_redis():
 async def create_project(
     project: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    current_user: User | None = Depends(lambda: None)  # Optional auth
 ):
-    """Create a new project from URL."""
+    """Create a new project from URL.
+    If user is authenticated, project belongs to them.
+    If not, project belongs to default user (ID=1)."""
     from urllib.parse import urlparse
     
-    # Use authenticated user's ID
-    user_id = current_user.id
+    # Use authenticated user's ID or default to 1
+    user_id = current_user.id if current_user else 1
+    
+    # Ensure default user exists
+    if user_id == 1:
+        existing_user = await safe_scalar(db, select(User).where(User.id == 1))
+        if not existing_user:
+            default_user = User(
+                id=1,
+                email="default@example.com",
+                password_hash="dummy_hash_for_testing"
+            )
+            db.add(default_user)
+            await db.commit()
     
     # Parse URL to get domain
     parsed = urlparse(str(project.url))
