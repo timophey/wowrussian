@@ -43,47 +43,47 @@ const STATUS_COLORS = {
   queued: 'default',
 };
 
-// Language code to name mapping (from translations)
-const getLanguageName = (code) => {
-  if (!code) return 'Unknown';
-  return t(`language.${code.toLowerCase()}`, { defaultValue: code.toUpperCase() });
-};
-
-// Get classification based on language
-const getClassification = (languageGuess) => {
-  if (!languageGuess) return t('classification.foreign');
-  const lang = languageGuess.toLowerCase();
-  if (lang === 'en') return t('classification.anglicism');
-  if (lang === 'fr') return t('classification.gallicism');
-  if (lang === 'de') return t('classification.germanism');
-  if (lang === 'it') return t('classification.italianism');
-  if (lang === 'es') return t('classification.hispanism');
-  if (lang === 'ru') return t('classification.russian');
-  return t('classification.foreign');
-};
-
-// Get classification color
-const getClassificationColor = (languageGuess) => {
-  const classification = getClassification(languageGuess);
-  switch (classification) {
-    case t('classification.anglicism'):
-      return 'error';
-    case t('classification.gallicism'):
-      return 'secondary';
-    case t('classification.germanism'):
-      return 'warning';
-    case t('classification.italianism'):
-      return 'info';
-    case t('classification.hispanism'):
-      return 'success';
-    default:
-      return 'default';
-  }
-};
-
 function ProjectPage() {
   const { t } = useTranslation();
   const { id } = useParams();
+
+  // Language code to name mapping (from translations)
+  const getLanguageName = (code) => {
+    if (!code) return t('page.unknown');
+    return t(`language.${code.toLowerCase()}`, { defaultValue: code.toUpperCase() });
+  };
+
+  // Get classification based on language
+  const getClassification = (languageGuess) => {
+    if (!languageGuess) return t('classification.foreign');
+    const lang = languageGuess.toLowerCase();
+    if (lang === 'en') return t('classification.anglicism');
+    if (lang === 'fr') return t('classification.gallicism');
+    if (lang === 'de') return t('classification.germanism');
+    if (lang === 'it') return t('classification.italianism');
+    if (lang === 'es') return t('classification.hispanism');
+    if (lang === 'ru') return t('classification.russian');
+    return t('classification.foreign');
+  };
+
+  // Get classification color
+  const getClassificationColor = (languageGuess) => {
+    const classification = getClassification(languageGuess);
+    switch (classification) {
+      case t('classification.anglicism'):
+        return 'error';
+      case t('classification.gallicism'):
+        return 'secondary';
+      case t('classification.germanism'):
+        return 'warning';
+      case t('classification.italianism'):
+        return 'info';
+      case t('classification.hispanism'):
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [pages, setPages] = useState([]);
