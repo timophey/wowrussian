@@ -25,7 +25,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against its hash."""
+    """Verify a plain password against its hash.
+    Supports both bcrypt hashes and plain text (for legacy/development)."""
+    # If hash doesn't look like a bcrypt hash, treat as plain text
+    if not hashed_password.startswith('$2b$') and not hashed_password.startswith('$2a$'):
+        # Legacy: plain text comparison
+        return plain_password == hashed_password
+    # Use passlib for bcrypt hashes
     return pwd_context.verify(plain_password, hashed_password)
 
 
