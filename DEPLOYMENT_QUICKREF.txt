@@ -1,0 +1,94 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    WOWRUSSIAN DEPLOYMENT QUICK REFERENCE                    ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📦 FILES CREATED:
+   ├── deploy-production.sh      Full-featured production deployment (use this!)
+   ├── deploy-simple.sh          Minimal quick deployment
+   ├── deploy-config.example.sh  Configuration template
+   ├── DEPLOYMENT_SCRIPTS_README.md  Detailed documentation
+   └── DEPLOYMENT_QUICKREF.txt   This file
+
+🚀 PRODUCTION DEPLOYMENT (Recommended):
+   
+   1. First time setup:
+      cp deploy-config.example.sh deploy-config.sh
+      nano deploy-config.sh  # Edit DEPLOY_DIR, BACKUP_DIR, FRONTEND_PORT
+   
+   2. Deploy:
+      chmod +x deploy-production.sh
+      sudo ./deploy-production.sh
+   
+   3. Monitor:
+      tail -f /var/log/wowrussian-deploy-*.log
+      docker-compose ps
+      docker-compose logs -f
+
+⚡ QUICK DEPLOYMENT (Simple):
+   
+   ./deploy-simple.sh
+
+📋 CONFIGURATION CHECKLIST:
+   
+   □ DEPLOY_DIR set correctly (default: /home/cloudpanel/domains/yourdomain.com/wowrussian)
+   □ BACKUP_DIR exists and has space
+   □ FRONTEND_PORT matches .env file (default: 3000)
+   □ .env file configured with production values
+   □ User in docker group or using sudo
+   □ Git SSH keys configured for pull access
+
+🔍 TROUBLESHOOTING:
+   
+   Permission denied:
+      sudo usermod -aG docker $USER
+      Or use: sudo ./deploy-production.sh
+   
+   Health check fails:
+      docker-compose logs backend
+      docker-compose logs frontend
+   
+   Git pull fails:
+      ssh -T git@github.com  # Test SSH connection
+   
+   Disk full:
+      docker system prune -a
+      df -h  # Check space
+
+📊 WHAT THE SCRIPT DOES:
+   
+   1. ✓ Pre-flight checks (Docker, disk space, permissions)
+   2. ✓ Backup database and storage
+   3. ✓ Git pull (with stash if uncommitted changes)
+   4. ✓ Stop old containers
+   5. ✓ Pull latest images
+   6. ✓ Build and start new containers
+   7. ✓ Health check (wait up to 120s)
+   8. ✓ Cleanup old Docker images/volumes/containers
+   9. ✓ Generate report with status and disk usage
+
+📝 LOGS:
+   
+   Deployment logs: /var/log/wowrussian-deploy-YYYYMMDD-HHMMSS.log
+   Application logs: docker-compose logs [service]
+   System logs: /var/log/nginx/
+
+🔐 SECURITY:
+   
+   - Never commit .env with production secrets
+   - Set script permissions: chmod 750 deploy-production.sh
+   - Use SSH deploy keys with read-only access
+   - Store backups securely (encrypted if sensitive)
+
+🔄 AUTOMATION (Cron):
+   
+   0 2 * * * /path/to/deploy-production.sh >> /var/log/wowrussian-cron.log 2>&1
+
+📚 MORE INFO:
+   
+   - Full docs: DEPLOYMENT_SCRIPTS_README.md
+   - Deployment guide: docs/DEPLOYMENT.md
+   - Database migrations: docs/DATABASE_MIGRATION.md
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  Always test in staging first! Keep backups! Monitor after deployment!      ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
