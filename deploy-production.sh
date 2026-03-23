@@ -52,15 +52,35 @@ log_error() {
     log "ERROR" "${RED}$1${NC}"
 }
 
-# Load environment variables from .env file
+# Load environment variables from .env file safely (handles spaces in values)
 load_env() {
     log_info "Loading environment from $ENV_FILE..."
     
     if [[ -f "$ENV_FILE" ]]; then
-        # Export all variables from .env file
-        set -a
-        source "$ENV_FILE"
-        set +a
+        # Parse .env file line by line, handling quoted values
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "${line//[[:space:]]/}" ]] && continue
+            
+            # Remove surrounding whitespace
+            line="${line#"${line%%[![:space:]]*}"}"
+            line="${line%"${line##*[![:space:]]}"}"
+            
+            # Split on first '='
+            if [[ "$line" == *=* ]]; then
+                var_name="${line%%=*}"
+                var_value="${line#*=}"
+                
+                # Remove surrounding quotes if present
+                if [[ "$var_value" =~ ^\".*\"$ ]] || [[ "$var_value" =~ ^\'.*\'$ ]]; then
+                    var_value="${var_value:1:${#var_value}-2}"
+                fi
+                
+                # Export the variable
+                export "$var_name"="$var_value"
+            fi
+        done < "$ENV_FILE"
         log_success "Environment loaded"
     else
         log_warning "$ENV_FILE not found, using defaults"

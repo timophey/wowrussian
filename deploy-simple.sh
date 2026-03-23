@@ -31,11 +31,22 @@ echo "Deploy directory: $DEPLOY_DIR"
 # Change to app directory
 cd "$DEPLOY_DIR" || { echo "ERROR: Cannot change to $DEPLOY_DIR"; exit 1; }
 
-# Load .env file if exists
+# Load .env file safely (handles spaces in values)
 if [[ -f ".env" ]]; then
-    set -a
-    source ".env"
-    set +a
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        if [[ "$line" == *=* ]]; then
+            var_name="${line%%=*}"
+            var_value="${line#*=}"
+            if [[ "$var_value" =~ ^\".*\"$ ]] || [[ "$var_value" =~ ^\'.*\'$ ]]; then
+                var_value="${var_value:1:${#var_value}-2}"
+            fi
+            export "$var_name"="$var_value"
+        fi
+    done < ".env"
     echo "Loaded environment from .env"
 fi
 
