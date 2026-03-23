@@ -16,6 +16,7 @@ from app.schemas.page import PageResponse
 from app.services.file_storage import FileStorage
 from app.tasks import crawl_project
 from app.utils.db import safe_scalar
+from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
