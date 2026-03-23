@@ -185,11 +185,11 @@ function ProjectsListPage() {
                     color={STATUS_COLORS[project.status] || 'default'}
                   />
                 </TableCell>
-                <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
-                <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
                 <TableCell align="right">
                   {new Date(project.created_at).toLocaleDateString()}
                 </TableCell>
+                <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
+                <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
                 <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                   <IconButton
                     size="small"

@@ -107,6 +107,34 @@ async def list_projects(
     
     result = await db.execute(query)
     projects = result.scalars().all()
+    
+    # Calculate actual statistics for all projects in batch
+    if projects:
+        project_ids = [p.id for p in projects]
+        
+        # Get page counts per project
+        page_counts_result = await db.execute(
+            select(Page.project_id, func.count(Page.id))
+            .where(Page.project_id.in_(project_ids))
+            .group_by(Page.project_id)
+        )
+        page_counts = {pid: count for pid, count in page_counts_result.all()}
+        
+        # Get foreign words counts per project (sum of foreign_words_count from pages)
+        foreign_words_result = await db.execute(
+            select(Page.project_id, func.sum(Page.foreign_words_count))
+            .where(Page.project_id.in_(project_ids))
+            .group_by(Page.project_id)
+        )
+        foreign_words_counts = {pid: count for pid, count in foreign_words_result.all()}
+        
+        # Update each project's stats with calculated values
+        for project in projects:
+            project.stats = {
+                "total_pages": page_counts.get(project.id, 0),
+                "foreign_words_count": foreign_words_counts.get(project.id, 0) or 0
+            }
+    
     return projects
 
 
