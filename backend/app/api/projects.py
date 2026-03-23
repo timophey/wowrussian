@@ -29,26 +29,13 @@ async def get_redis():
 async def create_project(
     project: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)  # TODO: Implement proper auth
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Create a new project from URL."""
     from urllib.parse import urlparse
     
-    # Get or create default user (for testing without auth)
-    user_id = 1
-    if current_user:
-        user_id = current_user.id
-    else:
-        # Check if default user exists, create if not
-        existing_user = await safe_scalar(db, select(User).where(User.id == user_id))
-        if not existing_user:
-            default_user = User(
-                id=user_id,
-                email="default@example.com",
-                password_hash="dummy_hash_for_testing"  # Simple placeholder for testing
-            )
-            db.add(default_user)
-            await db.commit()
+    # Use authenticated user's ID
+    user_id = current_user.id
     
     # Parse URL to get domain
     parsed = urlparse(str(project.url))
@@ -83,7 +70,7 @@ async def create_project(
 @router.get("", response_model=List[ProjectResponse])
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None),
+    current_user: User = Depends(get_current_user),  # Require authentication
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", description="Sort order: asc or desc")
 ):
@@ -101,8 +88,8 @@ async def list_projects(
     # Validate sort_order
     order_func = asc if sort_order.lower() == "asc" else desc
     
-    # Build query with dynamic ordering
-    query = select(Project).where(Project.user_id == 1)
+    # Build query with dynamic ordering - filter by authenticated user
+    query = select(Project).where(Project.user_id == current_user.id)
     query = query.order_by(order_func(allowed_sort_fields[sort_by]))
     
     result = await db.execute(query)
@@ -142,10 +129,17 @@ async def list_projects(
 async def get_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Get project details with statistics."""
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    # Ensure project belongs to current user
+    project = await safe_scalar(
+        db,
+        select(Project).where(
+            Project.id == project_id,
+            Project.user_id == current_user.id
+        )
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -201,10 +195,17 @@ async def get_project(
 async def delete_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Delete project and all associated data."""
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    # Ensure project belongs to current user
+    project = await safe_scalar(
+        db,
+        select(Project).where(
+            Project.id == project_id,
+            Project.user_id == current_user.id
+        )
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -223,10 +224,17 @@ async def delete_project(
 async def clear_project_pages(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Clear all pages and crawl queue for a project."""
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    # Ensure project belongs to current user
+    project = await safe_scalar(
+        db,
+        select(Project).where(
+            Project.id == project_id,
+            Project.user_id == current_user.id
+        )
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -256,10 +264,17 @@ async def clear_project_pages(
 async def stop_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Stop project scanning."""
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    # Ensure project belongs to current user
+    project = await safe_scalar(
+        db,
+        select(Project).where(
+            Project.id == project_id,
+            Project.user_id == current_user.id
+        )
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -273,10 +288,17 @@ async def stop_project(
 async def start_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(lambda: None)
+    current_user: User = Depends(get_current_user)  # Require authentication
 ):
     """Manually start project crawling."""
-    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+    # Ensure project belongs to current user
+    project = await safe_scalar(
+        db,
+        select(Project).where(
+            Project.id == project_id,
+            Project.user_id == current_user.id
+        )
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     

@@ -18,8 +18,14 @@ import {
   IconButton,
   Button,
   TableSortLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
-import { Visibility, Delete, Add } from '@mui/icons-material';
+import { Visibility, Delete, Add, Person } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 import { projectApi } from '../services/api';
 
 const STATUS_COLORS = {
@@ -34,19 +40,30 @@ const STATUS_COLORS = {
 
 function ProjectsListPage() {
   const { t } = useTranslation();
+  const { isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const fetchProjects = async (params = {}) => {
     try {
       const res = await projectApi.list(params);
       setProjects(res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || t('errors.failedToLoadProjects'));
+      if (err.response?.status === 401) {
+        setError(t('errors.unauthorized'));
+      } else {
+        setError(err.response?.data?.detail || t('errors.failedToLoadProjects'));
+      }
     } finally {
       setLoading(false);
     }
@@ -106,11 +123,122 @@ function ProjectsListPage() {
     setSortOrder(newSortOrder);
   };
 
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      let result;
+      if (authMode === 'login') {
+        result = await login(email, password);
+      } else {
+        result = await register(email, password);
+      }
+
+      if (result.success) {
+        setAuthDialogOpen(false);
+        setEmail('');
+        setPassword('');
+        // Refresh projects after successful auth
+        fetchProjects({ sort_by: sortBy, sort_order: sortOrder });
+      } else {
+        setAuthError(result.error);
+      }
+    } catch (err) {
+      setAuthError(t('errors.failedToLoad'));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const openAuthDialog = (mode) => {
+    setAuthMode(mode);
+    setAuthDialogOpen(true);
+    setAuthError('');
+    setEmail('');
+    setPassword('');
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <CircularProgress />
       </Box>
+    );
+  }
+
+  // If not authenticated, show login prompt
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Container maxWidth="sm" sx={{ mt: 8 }}>
+          <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+            <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              {t('projects.loginRequired')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              {t('projects.loginToViewProjects')}
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Person />}
+              onClick={() => openAuthDialog('login')}
+            >
+              {t('home.login')}
+            </Button>
+          </Paper>
+        </Container>
+
+        {/* Auth Dialog */}
+        <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>
+            {authMode === 'login' ? t('home.login') : t('home.register')}
+          </DialogTitle>
+          <form onSubmit={handleAuthSubmit}>
+            <DialogContent>
+              <TextField
+                autoFocus
+                margin="dense"
+                label={t('home.email')}
+                type="email"
+                fullWidth
+                variant="outlined"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                sx={{ mb: 2 }}
+                required
+              />
+              <TextField
+                margin="dense"
+                label={t('home.password')}
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                inputProps={{ minLength: 8 }}
+              />
+              {authError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {authError}
+                </Alert>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setAuthDialogOpen(false)}>
+                {t('dialogs.cancel')}
+              </Button>
+              <Button type="submit" variant="contained" disabled={authLoading}>
+                {authLoading ? <CircularProgress size={20} /> : (authMode === 'login' ? t('home.login') : t('home.register'))}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+      </>
     );
   }
 

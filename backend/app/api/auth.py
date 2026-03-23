@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -11,9 +13,25 @@ from app.models.user import User
 from app.schemas.user import UserCreate, User as UserSchema, Token, UserLogin
 from app.utils.db import safe_scalar
 
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against its hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """Hash a password."""
+    return pwd_context.hash(password)
 
 
 async def authenticate_user(email: str, password: str, db: AsyncSession) -> User | None:
@@ -21,8 +39,8 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
     user = await safe_scalar(db, select(User).where(User.email == email))
     if not user:
         return None
-    # TODO: Implement proper password verification with passlib
-    # For now, we'll just check plain text (NOT PRODUCTION READY)
+    if not verify_password(password, user.password_hash):
+        return None
     return user
 
 
@@ -34,9 +52,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode.update({"exp": expire})
-    # TODO: Implement proper JWT encoding with python-jose
-    # For now, return a simple string (NOT PRODUCTION READY)
-    return f"fake-token-{data['sub']}"
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
 
 
 @router.post("/register", response_model=UserSchema)
@@ -50,10 +67,13 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
             detail="Email already registered"
         )
     
-    # Create new user (TODO: hash password properly)
+    # Hash password before storing
+    hashed_password = get_password_hash(user.password)
+    
+    # Create new user with hashed password
     new_user = User(
         email=user.email,
-        password_hash=user.password  # THIS IS NOT SECURE - TODO: HASH!
+        password_hash=hashed_password
     )
     db.add(new_user)
     await db.commit()
@@ -82,14 +102,21 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """Get current user from token."""
-    # TODO: Implement proper JWT verification
-    # For now, just return first user (NOT PRODUCTION READY)
-    user = await safe_scalar(db, select(User))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """Get current user from JWT token."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = await safe_scalar(db, select(User).where(User.id == int(user_id)))
+    if user is None:
+        raise credentials_exception
     return user

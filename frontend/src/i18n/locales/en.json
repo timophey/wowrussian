@@ -14,7 +14,16 @@
     "validUrlRequired": "Please enter a valid URL (including http:// or https://)",
     "failedToCreate": "Failed to create project",
     "description": "The analyzer will crawl the website, extract text content, and identify foreign words. Results will be available in real-time as the analysis progresses.",
-    "viewAllProjects": "View All Projects"
+    "viewAllProjects": "View All Projects",
+    "loginToViewProjects": "Login to View Projects",
+    "loggedInAs": "Logged in as",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "noAccount": "Don't have an account? Register",
+    "haveAccount": "Already have an account? Login"
   },
   "projects": {
     "title": "Projects",
@@ -28,7 +37,9 @@
     "noProjects": "No projects yet. Create one to get started!",
     "confirmDelete": "Are you sure you want to delete this project?",
     "delete": "Delete",
-    "view": "View"
+    "view": "View",
+    "loginRequired": "Login Required",
+    "loginToViewProjects": "Please log in to view your projects"
   },
   "status": {
     "pending": "Pending",
@@ -138,7 +149,8 @@
     "failedToClearPages": "Failed to clear pages",
     "failedToLoadPageDetails": "Failed to load page details",
     "failedToLoadHtml": "Failed to load HTML",
-    "failedToLoadText": "Failed to load text"
+    "failedToLoadText": "Failed to load text",
+    "unauthorized": "Unauthorized. Please log in."
   },
   "admin": {
     "adminPanel": "Admin Panel",

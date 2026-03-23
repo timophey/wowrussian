@@ -2,12 +2,58 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
+// Get auth token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('access_token');
+};
+
+// Set auth token
+const setAuthToken = (token) => {
+  if (token) {
+    localStorage.setItem('access_token', token);
+  } else {
+    localStorage.removeItem('access_token');
+  }
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      // Clear token and redirect to home
+      setAuthToken(null);
+      window.location.href = '/';
+      return Promise.reject(error);
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 // Project API
 export const projectApi = {

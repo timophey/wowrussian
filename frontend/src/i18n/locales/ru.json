@@ -14,7 +14,16 @@
     "validUrlRequired": "Пожалуйста, введите корректный URL (с http:// или https://)",
     "failedToCreate": "Не удалось создать проект",
     "description": "Анализатор просканирует веб-сайт, извлечет текстовый контент и определит иностранные слова. Результаты будут доступны в реальном времени по мере анализа.",
-    "viewAllProjects": "Все Проекты"
+    "viewAllProjects": "Все Проекты",
+    "loginToViewProjects": "Войти для просмотра проектов",
+    "loggedInAs": "Вошли как",
+    "logout": "Выйти",
+    "login": "Войти",
+    "register": "Зарегистрироваться",
+    "email": "Email",
+    "password": "Пароль",
+    "noAccount": "Нет аккаунта? Зарегистрироваться",
+    "haveAccount": "Уже есть аккаунт? Войти"
   },
   "projects": {
     "title": "Проекты",
@@ -28,7 +37,9 @@
     "noProjects": "Проектов пока нет. Создайте первый!",
     "confirmDelete": "Вы уверены, что хотите удалить этот проект?",
     "delete": "Удалить",
-    "view": "Просмотр"
+    "view": "Просмотр",
+    "loginRequired": "Требуется Авторизация",
+    "loginToViewProjects": "Пожалуйста, войдите, чтобы просмотреть свои проекты"
   },
   "status": {
     "pending": "Ожидает",
@@ -129,7 +140,7 @@
     "close": "Закрыть",
     "htmlContent": "HTML Контент"
   },
-   "errors": {
+    "errors": {
     "failedToLoad": "Не удалось загрузить",
     "failedToLoadProjects": "Не удалось загрузить проекты",
     "failedToDeleteProject": "Не удалось удалить проект",
@@ -138,7 +149,8 @@
     "failedToClearPages": "Не удалось очистить страницы",
     "failedToLoadPageDetails": "Не удалось загрузить детали страницы",
     "failedToLoadHtml": "Не удалось загрузить HTML",
-    "failedToLoadText": "Не удалось загрузить текст"
+    "failedToLoadText": "Не удалось загрузить текст",
+    "unauthorized": "Не авторизовано. Пожалуйста, войдите."
   },
   "admin": {
     "adminPanel": "Панель Администратора",
