@@ -47,6 +47,8 @@
     "websocket": "WebSocket",
     "connected": "Подключен",
     "disconnected": "Отключен",
+    "pages": "Страницы",
+    "status": "Статус",
     "totalPages": "Всего Страниц",
     "foreignWords": "Иностранных Слов",
     "uniqueForeign": "Уникальных Иностранных",

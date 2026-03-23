@@ -47,6 +47,8 @@
     "websocket": "WebSocket",
     "connected": "Connected",
     "disconnected": "Disconnected",
+    "pages": "Pages",
+    "status": "Status",
     "totalPages": "Total Pages",
     "foreignWords": "Foreign Words",
     "uniqueForeign": "Unique Foreign",
