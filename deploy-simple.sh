@@ -80,8 +80,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Get frontend port from environment
-local frontend_port="${FRONTEND_PORT:-3000}"
-local server_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+frontend_port="${FRONTEND_PORT:-3000}"
+server_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
 
 echo "  Accessible URLs:"
 echo "    • Frontend:  http://localhost:${frontend_port}"
@@ -92,7 +92,7 @@ echo ""
 
 if [[ -n "$ALLOWED_ORIGINS" ]]; then
     echo "  Allowed Origins (CORS):"
-    local origins=$(echo "$ALLOWED_ORIGINS" | sed 's/\[//g; s/\]//g; s/"//g; s/ //g')
+    origins=$(echo "$ALLOWED_ORIGINS" | sed 's/\[//g; s/\]//g; s/"//g; s/ //g')
     IFS=',' read -ra origin_array <<< "$origins"
     for origin in "${origin_array[@]}"; do
         [[ -n "$origin" ]] && echo "    • $origin"
