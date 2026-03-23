@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -42,67 +43,38 @@ const STATUS_COLORS = {
   queued: 'default',
 };
 
-// Language code to name mapping
-const LANGUAGE_NAMES = {
-  'en': 'English',
-  'fr': 'French',
-  'de': 'German',
-  'es': 'Spanish',
-  'it': 'Italian',
-  'pt': 'Portuguese',
-  'ru': 'Russian',
-  'uk': 'Ukrainian',
-  'pl': 'Polish',
-  'cs': 'Czech',
-  'nl': 'Dutch',
-  'sv': 'Swedish',
-  'no': 'Norwegian',
-  'da': 'Danish',
-  'fi': 'Finnish',
-  'el': 'Greek',
-  'tr': 'Turkish',
-  'ar': 'Arabic',
-  'he': 'Hebrew',
-  'ja': 'Japanese',
-  'ko': 'Korean',
-  'zh': 'Chinese',
-  'hi': 'Hindi',
-  'th': 'Thai',
-  'vi': 'Vietnamese',
-};
-
-// Get language display name
+// Language code to name mapping (from translations)
 const getLanguageName = (code) => {
   if (!code) return 'Unknown';
-  return LANGUAGE_NAMES[code.toLowerCase()] || code.toUpperCase();
+  return t(`language.${code.toLowerCase()}`, { defaultValue: code.toUpperCase() });
 };
 
 // Get classification based on language
 const getClassification = (languageGuess) => {
-  if (!languageGuess) return 'Foreign';
+  if (!languageGuess) return t('classification.foreign');
   const lang = languageGuess.toLowerCase();
-  if (lang === 'en') return 'Anglicism';
-  if (lang === 'fr') return 'Gallicism';
-  if (lang === 'de') return 'Germanism';
-  if (lang === 'it') return 'Italianism';
-  if (lang === 'es') return 'Hispanism';
-  if (lang === 'ru') return 'Russian';
-  return 'Foreign';
+  if (lang === 'en') return t('classification.anglicism');
+  if (lang === 'fr') return t('classification.gallicism');
+  if (lang === 'de') return t('classification.germanism');
+  if (lang === 'it') return t('classification.italianism');
+  if (lang === 'es') return t('classification.hispanism');
+  if (lang === 'ru') return t('classification.russian');
+  return t('classification.foreign');
 };
 
 // Get classification color
 const getClassificationColor = (languageGuess) => {
   const classification = getClassification(languageGuess);
   switch (classification) {
-    case 'Anglicism':
+    case t('classification.anglicism'):
       return 'error';
-    case 'Gallicism':
+    case t('classification.gallicism'):
       return 'secondary';
-    case 'Germanism':
+    case t('classification.germanism'):
       return 'warning';
-    case 'Italianism':
+    case t('classification.italianism'):
       return 'info';
-    case 'Hispanism':
+    case t('classification.hispanism'):
       return 'success';
     default:
       return 'default';
@@ -110,6 +82,7 @@ const getClassificationColor = (languageGuess) => {
 };
 
 function ProjectPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
@@ -158,7 +131,7 @@ function ProjectPage() {
       }
     } catch (err) {
       if (mountedRef.current && currentIdRef.current === id) {
-        setError(err.response?.data?.detail || 'Failed to load project');
+        setError(err.response?.data?.detail || t('errors.failedToLoad'));
       }
     } finally {
       fetchInProgress.current = false;
@@ -166,7 +139,7 @@ function ProjectPage() {
         setLoading(false);
       }
     }
-  }, [id, sortBy, sortOrder]);
+  }, [id, sortBy, sortOrder, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -263,7 +236,7 @@ function ProjectPage() {
       // Optimistically update status
       setProject(prev => prev ? { ...prev, status: 'stopped' } : null);
     } catch (err) {
-      setError('Failed to stop project');
+      setError(t('errors.failedToStopProject'));
     }
   };
 
@@ -276,7 +249,7 @@ function ProjectPage() {
       setPages([]);
       setStats({ total_pages: 0, foreign_words_count: 0, unique_foreign_words: 0, foreign_percentage: 0 });
     } catch (err) {
-      setError('Failed to start project: ' + (err.response?.data?.detail || err.message));
+      setError(t('errors.failedToStartProject') + ': ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -289,7 +262,7 @@ function ProjectPage() {
       setProject(prev => prev ? { ...prev, status: 'pending' } : null);
       setClearDialogOpen(false);
     } catch (err) {
-      setError('Failed to clear pages: ' + (err.response?.data?.detail || err.message));
+      setError(t('errors.failedToClearPages') + ': ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -300,32 +273,32 @@ function ProjectPage() {
       setSelectedPage(page);
       setPageDetailOpen(true);
     } catch (err) {
-      setError('Failed to load page details');
+      setError(t('errors.failedToLoadPageDetails'));
     }
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return t('status.pending');
       case 'crawling':
-        return 'Crawling';
+        return t('status.crawling');
       case 'parsing':
-        return 'Parsing';
+        return t('status.parsing');
       case 'analyzing':
-        return 'Analyzing';
+        return t('status.analyzing');
       case 'completed':
-        return 'Completed';
+        return t('status.completed');
       case 'stopped':
-        return 'Stopped';
+        return t('status.stopped');
       case 'failed':
-        return 'Failed';
+        return t('status.failed');
       case 'queued':
-        return 'Queued';
+        return t('status.queued');
       case 'parsed':
-        return 'Parsed';
+        return t('status.parsed');
       case 'analyzed':
-        return 'Analyzed';
+        return t('status.analyzed');
       default:
         return status;
     }
@@ -364,7 +337,7 @@ function ProjectPage() {
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box sx={{ mb: 3 }}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate('/projects')} sx={{ mb: 2 }}>
-          Back to Projects
+          {t('project.backToProjects')}
         </Button>
         <Typography variant="h4" gutterBottom>
           {project?.domain}
@@ -375,7 +348,7 @@ function ProjectPage() {
             color={STATUS_COLORS[project?.status] || 'default'}
           />
           <Typography variant="body2" color="text.secondary">
-            WebSocket: {isConnected ? 'Connected' : 'Disconnected'}
+            {t('project.websocket')}: {isConnected ? t('project.connected') : t('project.disconnected')}
           </Typography>
         </Box>
       </Box>
@@ -386,7 +359,7 @@ function ProjectPage() {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Total Pages
+                  {t('project.totalPages')}
                 </Typography>
                 <Typography variant="h4">{stats.total_pages}</Typography>
               </CardContent>
@@ -396,7 +369,7 @@ function ProjectPage() {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Foreign Words
+                  {t('project.foreignWords')}
                 </Typography>
                 <Typography variant="h4">{stats.total_foreign_words}</Typography>
               </CardContent>
@@ -406,7 +379,7 @@ function ProjectPage() {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Unique Foreign
+                  {t('project.uniqueForeign')}
                 </Typography>
                 <Typography variant="h4">{stats.unique_foreign_words}</Typography>
               </CardContent>
@@ -416,7 +389,7 @@ function ProjectPage() {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Foreign %
+                  {t('project.foreignPercent')}
                 </Typography>
                 <Typography variant="h4">{stats.foreign_percentage.toFixed(1)}%</Typography>
               </CardContent>
@@ -426,7 +399,7 @@ function ProjectPage() {
       )}
 
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Pages</Typography>
+        <Typography variant="h5">{t('project.pages')}</Typography>
         <Box display="flex" gap={1}>
           <Button
             variant="contained"
@@ -434,7 +407,7 @@ function ProjectPage() {
             onClick={handleStart}
             disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
           >
-            Start Download
+            {t('project.startDownload')}
           </Button>
           <Button
             variant="outlined"
@@ -442,7 +415,7 @@ function ProjectPage() {
             onClick={handleStop}
             disabled={['completed', 'stopped', 'failed'].includes(project?.status)}
           >
-            Stop
+            {t('project.stop')}
           </Button>
           <Button
             variant="outlined"
@@ -451,7 +424,7 @@ function ProjectPage() {
             disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
             color="error"
           >
-            Clear Pages
+            {t('project.clearPages')}
           </Button>
         </Box>
       </Box>
@@ -466,7 +439,7 @@ function ProjectPage() {
                   direction={sortBy === 'url' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('url')}
                 >
-                  URL
+                  {t('project.url')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -475,7 +448,7 @@ function ProjectPage() {
                   direction={sortBy === 'status' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('status')}
                 >
-                  Status
+                  {t('project.status')}
                 </TableSortLabel>
               </TableCell>
               <TableCell align="right">
@@ -484,7 +457,7 @@ function ProjectPage() {
                   direction={sortBy === 'foreign_words_count' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('foreign_words_count')}
                 >
-                  Foreign Words
+                  {t('project.foreignWords')}
                 </TableSortLabel>
               </TableCell>
               <TableCell align="right">
@@ -493,10 +466,10 @@ function ProjectPage() {
                   direction={sortBy === 'words_count' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('words_count')}
                 >
-                  Total Words
+                  {t('project.totalWords')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell align="center">{t('project.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -524,7 +497,7 @@ function ProjectPage() {
             {pages.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  No pages yet
+                  {t('page.noForeignWords')}
                 </TableCell>
               </TableRow>
             )}
@@ -539,30 +512,30 @@ function ProjectPage() {
             <DialogTitle>{selectedPage?.url}</DialogTitle>
             <DialogContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Status: {getStatusLabel(pageDetail.status)}
+                {t('page.status')}: {getStatusLabel(pageDetail.status)}
               </Typography>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  Total words: {pageDetail.words_count}
+                  {t('page.totalWords')}: {pageDetail.words_count}
                 </Typography>
                 <Typography variant="body2">
-                  Foreign words: {pageDetail.foreign_words_count}
+                  {t('page.foreignWords')}: {pageDetail.foreign_words_count}
                 </Typography>
               </Box>
 
               {pageDetail.foreign_words && pageDetail.foreign_words.length > 0 && (
                 <>
                   <Typography variant="h6" gutterBottom>
-                    Foreign Words Found
+                    {t('page.detectedForeignWords')}
                   </Typography>
                   <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>Word</TableCell>
-                          <TableCell>Language</TableCell>
-                          <TableCell>Type</TableCell>
-                          <TableCell align="right">Count</TableCell>
+                          <TableCell>{t('page.word')}</TableCell>
+                          <TableCell>{t('page.language')}</TableCell>
+                          <TableCell>{t('page.type')}</TableCell>
+                          <TableCell align="right">{t('page.count')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -590,15 +563,15 @@ function ProjectPage() {
             {pageDetail.russian_words && pageDetail.russian_words.length > 0 && (
               <>
                 <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                  Russian Words Found
+                  {t('page.russianWordsFound')}
                 </Typography>
                 <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Word</TableCell>
-                        <TableCell>Dictionary Source</TableCell>
-                        <TableCell align="right">Count</TableCell>
+                        <TableCell>{t('page.word')}</TableCell>
+                        <TableCell>{t('page.dictionarySource')}</TableCell>
+                        <TableCell align="right">{t('page.count')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -609,8 +582,8 @@ function ProjectPage() {
                             <TableCell>{rw.word}</TableCell>
                             <TableCell>
                               <Chip
-                                label={rw.source === 'dictionary' ? 'Main Dictionary' :
-                                       rw.source === 'fallback' ? 'Fallback Dictionary' : 'Unknown'}
+                                label={rw.source === 'dictionary' ? t('page.mainDictionary') :
+                                       rw.source === 'fallback' ? t('page.fallbackDictionary') : t('page.unknown')}
                                 color={rw.source === 'dictionary' ? 'success' :
                                        rw.source === 'fallback' ? 'warning' : 'default'}
                                 size="small"
@@ -629,19 +602,19 @@ function ProjectPage() {
             {pageDetail.text_content && (
                 <>
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                    Extracted Text
+                    {t('page.extractedText')}
                   </Typography>
                   <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
                     <Typography variant="body2" component="pre" style={{ whiteSpace: 'pre-wrap' }}>
                       {pageDetail.text_content.substring(0, 2000)}
-                      {pageDetail.text_content.length > 2000 && '... (truncated)'}
+                      {pageDetail.text_content.length > 2000 && t('page.truncated')}
                     </Typography>
                   </Paper>
                 </>
               )}
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setPageDetailOpen(false)}>Close</Button>
+              <Button onClick={() => setPageDetailOpen(false)}>{t('dialogs.close')}</Button>
             </DialogActions>
           </>
         ) : (
@@ -651,17 +624,16 @@ function ProjectPage() {
 
       {/* Clear Pages Confirmation Dialog */}
       <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
-        <DialogTitle>Clear All Pages?</DialogTitle>
+        <DialogTitle>{t('dialogs.clearAllPages')}</DialogTitle>
         <DialogContent>
           <Typography>
-            This will delete all pages, crawl queue, and associated data for this project.
-            This action cannot be undone.
+            {t('dialogs.clearConfirmation')}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setClearDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setClearDialogOpen(false)}>{t('dialogs.cancel')}</Button>
           <Button onClick={handleClear} color="error" variant="contained">
-            Clear All
+            {t('dialogs.clearAll')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -25,74 +26,8 @@ import {
 import { ArrowBack, Visibility, Code } from '@mui/icons-material';
 import { pageApi } from '../services/api';
 
-// Language code to name mapping
-const LANGUAGE_NAMES = {
-  'en': 'English',
-  'fr': 'French',
-  'de': 'German',
-  'es': 'Spanish',
-  'it': 'Italian',
-  'pt': 'Portuguese',
-  'ru': 'Russian',
-  'uk': 'Ukrainian',
-  'pl': 'Polish',
-  'cs': 'Czech',
-  'nl': 'Dutch',
-  'sv': 'Swedish',
-  'no': 'Norwegian',
-  'da': 'Danish',
-  'fi': 'Finnish',
-  'el': 'Greek',
-  'tr': 'Turkish',
-  'ar': 'Arabic',
-  'he': 'Hebrew',
-  'ja': 'Japanese',
-  'ko': 'Korean',
-  'zh': 'Chinese',
-  'hi': 'Hindi',
-  'th': 'Thai',
-  'vi': 'Vietnamese',
-};
-
-// Get language display name
-const getLanguageName = (code) => {
-  if (!code) return 'Unknown';
-  return LANGUAGE_NAMES[code.toLowerCase()] || code.toUpperCase();
-};
-
-// Get classification based on language
-const getClassification = (languageGuess) => {
-  if (!languageGuess) return 'Foreign';
-  const lang = languageGuess.toLowerCase();
-  if (lang === 'en') return 'Anglicism';
-  if (lang === 'fr') return 'Gallicism';
-  if (lang === 'de') return 'Germanism';
-  if (lang === 'it') return 'Italianism';
-  if (lang === 'es') return 'Hispanism';
-  if (lang === 'ru') return 'Russian';
-  return 'Foreign';
-};
-
-// Get classification color
-const getClassificationColor = (languageGuess) => {
-  const classification = getClassification(languageGuess);
-  switch (classification) {
-    case 'Anglicism':
-      return 'error'; // red
-    case 'Gallicism':
-      return 'secondary'; // pink/purple
-    case 'Germanism':
-      return 'warning'; // orange
-    case 'Italianism':
-      return 'info'; // light blue
-    case 'Hispanism':
-      return 'success'; // green
-    default:
-      return 'default';
-  }
-};
-
 function PageDetailPage() {
+  const { t } = useTranslation();
   const { projectId, pageId } = useParams();
   const navigate = useNavigate();
   const [page, setPage] = useState(null);
@@ -104,12 +39,50 @@ function PageDetailPage() {
   const [htmlContent, setHtmlContent] = useState('');
   const [textContent, setTextContent] = useState('');
 
+  // Get language display name
+  const getLanguageName = (code) => {
+    if (!code) return t('page.unknown');
+    return t(`language.${code.toLowerCase()}`, { defaultValue: code.toUpperCase() });
+  };
+
+  // Get classification based on language
+  const getClassification = (languageGuess) => {
+    if (!languageGuess) return t('classification.foreign');
+    const lang = languageGuess.toLowerCase();
+    if (lang === 'en') return t('classification.anglicism');
+    if (lang === 'fr') return t('classification.gallicism');
+    if (lang === 'de') return t('classification.germanism');
+    if (lang === 'it') return t('classification.italianism');
+    if (lang === 'es') return t('classification.hispanism');
+    if (lang === 'ru') return t('classification.russian');
+    return t('classification.foreign');
+  };
+
+  // Get classification color
+  const getClassificationColor = (languageGuess) => {
+    const classification = getClassification(languageGuess);
+    switch (classification) {
+      case t('classification.anglicism'):
+        return 'error';
+      case t('classification.gallicism'):
+        return 'secondary';
+      case t('classification.germanism'):
+        return 'warning';
+      case t('classification.italianism'):
+        return 'info';
+      case t('classification.hispanism'):
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
   const fetchPage = async () => {
     try {
       const res = await pageApi.get(projectId, pageId);
       setPage(res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load page');
+      setError(err.response?.data?.detail || t('errors.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -125,7 +98,7 @@ function PageDetailPage() {
       setHtmlContent(res.data.html);
       setHtmlDialogOpen(true);
     } catch (err) {
-      setError('Failed to load HTML');
+      setError(t('errors.failedToLoadHtml'));
     }
   };
 
@@ -135,22 +108,22 @@ function PageDetailPage() {
       setTextContent(res.data.text);
       setTextDialogOpen(true);
     } catch (err) {
-      setError('Failed to load text');
+      setError(t('errors.failedToLoadText'));
     }
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
       case 'queued':
-        return 'Queued';
+        return t('status.queued');
       case 'crawling':
-        return 'Crawling';
+        return t('status.crawling');
       case 'parsed':
-        return 'Parsed';
+        return t('status.parsed');
       case 'analyzed':
-        return 'Analyzed';
+        return t('status.analyzed');
       case 'failed':
-        return 'Failed';
+        return t('status.failed');
       default:
         return status;
     }
@@ -182,12 +155,12 @@ function PageDetailPage() {
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box display="flex" alignItems="center" gap={2} mb={3}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate(`/project/${projectId}`)}>
-          Back to Project
+          {t('page.backToProject')}
         </Button>
       </Box>
 
       <Typography variant="h4" gutterBottom>
-        Page Analysis
+        {t('page.pageAnalysis')}
       </Typography>
 
       <Typography variant="body1" color="text.secondary" gutterBottom>
@@ -202,12 +175,12 @@ function PageDetailPage() {
         <Box sx={{ width: '100%' }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
-              Statistics
+              {t('page.statistics')}
             </Typography>
             <Box display="flex" gap={4}>
-              <Typography variant="body1">Total Words: {totalWords}</Typography>
-              <Typography variant="body1">Foreign Words: {foreignWords}</Typography>
-              <Typography variant="body1">Foreign %: {foreignPercentage}%</Typography>
+              <Typography variant="body1">{t('page.totalWords')}: {totalWords}</Typography>
+              <Typography variant="body1">{t('page.foreignWords')}: {foreignWords}</Typography>
+              <Typography variant="body1">{t('page.foreignPercent')}: {foreignPercentage}%</Typography>
             </Box>
           </Paper>
         </Box>
@@ -219,19 +192,19 @@ function PageDetailPage() {
           startIcon={<Code />}
           onClick={handleViewHtml}
         >
-          View HTML
+          {t('page.viewHtml')}
         </Button>
         <Button
           variant="outlined"
           startIcon={<Visibility />}
           onClick={handleViewText}
         >
-          View Text
+          {t('page.viewText')}
         </Button>
       </Box>
 
       <Typography variant="h5" gutterBottom>
-        Detected Foreign Words
+        {t('page.detectedForeignWords')}
       </Typography>
 
       {page?.foreign_words && page.foreign_words.length > 0 ? (
@@ -239,10 +212,10 @@ function PageDetailPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Word</TableCell>
-                <TableCell>Language</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell align="right">Count</TableCell>
+                <TableCell>{t('page.word')}</TableCell>
+                <TableCell>{t('page.language')}</TableCell>
+                <TableCell>{t('page.type')}</TableCell>
+                <TableCell align="right">{t('page.count')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -267,20 +240,20 @@ function PageDetailPage() {
           </Table>
         </TableContainer>
       ) : (
-        <Typography color="text.secondary">No foreign words detected.</Typography>
+        <Typography color="text.secondary">{t('page.noForeignWords')}</Typography>
       )}
 
     <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-      Russian Words Found
+      {t('page.russianWordsFound')}
     </Typography>
     {page?.russian_words && page.russian_words.length > 0 ? (
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Word</TableCell>
-              <TableCell>Dictionary Source</TableCell>
-              <TableCell align="right">Count</TableCell>
+              <TableCell>{t('page.word')}</TableCell>
+              <TableCell>{t('page.dictionarySource')}</TableCell>
+              <TableCell align="right">{t('page.count')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -291,8 +264,8 @@ function PageDetailPage() {
                   <TableCell>{rw.word}</TableCell>
                   <TableCell>
                     <Chip
-                      label={rw.source === 'dictionary' ? 'Main Dictionary' :
-                             rw.source === 'fallback' ? 'Fallback Dictionary' : 'Unknown'}
+                      label={rw.source === 'dictionary' ? t('page.mainDictionary') :
+                             rw.source === 'fallback' ? t('page.fallbackDictionary') : t('page.unknown')}
                       color={rw.source === 'dictionary' ? 'success' :
                              rw.source === 'fallback' ? 'warning' : 'default'}
                       size="small"
@@ -306,12 +279,12 @@ function PageDetailPage() {
         </Table>
       </TableContainer>
     ) : (
-      <Typography color="text.secondary">No Russian words data available.</Typography>
+      <Typography color="text.secondary">{t('page.noRussianWords')}</Typography>
     )}
 
     {/* HTML Dialog */}
       <Dialog open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>HTML Content</DialogTitle>
+        <DialogTitle>{t('dialogs.htmlContent')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto', bgcolor: 'grey.100' }}>
             <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
@@ -323,7 +296,7 @@ function PageDetailPage() {
 
       {/* Text Dialog */}
       <Dialog open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Extracted Text</DialogTitle>
+        <DialogTitle>{t('page.extractedText')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto' }}>
             <pre style={{ whiteSpace: 'pre-wrap' }}>

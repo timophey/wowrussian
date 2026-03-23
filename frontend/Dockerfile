@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (cached unless package.json changes)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code (only if not in .dockerignore)
 COPY src/ ./src/

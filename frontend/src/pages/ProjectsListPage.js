@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -32,6 +33,7 @@ const STATUS_COLORS = {
 };
 
 function ProjectsListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ function ProjectsListPage() {
       const res = await projectApi.list(params);
       setProjects(res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load projects');
+      setError(err.response?.data?.detail || t('errors.failedToLoadProjects'));
     } finally {
       setLoading(false);
     }
@@ -59,33 +61,33 @@ function ProjectsListPage() {
   }, [sortBy, sortOrder]);
 
   const handleDelete = async (projectId) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) {
+    if (!window.confirm(t('projects.confirmDelete'))) {
       return;
     }
     try {
       await projectApi.delete(projectId);
       setProjects(projects.filter((p) => p.id !== projectId));
     } catch (err) {
-      setError('Failed to delete project');
+      setError(t('errors.failedToDeleteProject'));
     }
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return t('status.pending');
       case 'crawling':
-        return 'Crawling';
+        return t('status.crawling');
       case 'parsing':
-        return 'Parsing';
+        return t('status.parsing');
       case 'analyzing':
-        return 'Analyzing';
+        return t('status.analyzing');
       case 'completed':
-        return 'Completed';
+        return t('status.completed');
       case 'stopped':
-        return 'Stopped';
+        return t('status.stopped');
       case 'failed':
-        return 'Failed';
+        return t('status.failed');
       default:
         return status;
     }
@@ -115,13 +117,13 @@ function ProjectsListPage() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Projects</Typography>
+        <Typography variant="h4">{t('projects.title')}</Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => navigate('/')}
         >
-          New Analysis
+          {t('projects.newAnalysis')}
         </Button>
       </Box>
 
@@ -141,7 +143,7 @@ function ProjectsListPage() {
                   direction={sortBy === 'domain' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('domain')}
                 >
-                  Domain
+                  {t('projects.domain')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -150,7 +152,7 @@ function ProjectsListPage() {
                   direction={sortBy === 'status' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('status')}
                 >
-                  Status
+                  {t('projects.status')}
                 </TableSortLabel>
               </TableCell>
               <TableCell align="right">
@@ -159,12 +161,12 @@ function ProjectsListPage() {
                   direction={sortBy === 'created_at' ? sortOrder : 'asc'}
                   onClick={() => handleRequestSort('created_at')}
                 >
-                  Created
+                  {t('projects.created')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell align="right">Pages</TableCell>
-              <TableCell align="right">Foreign Words</TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell align="right">{t('projects.pages')}</TableCell>
+              <TableCell align="right">{t('projects.foreignWords')}</TableCell>
+              <TableCell align="center">{t('projects.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -192,14 +194,14 @@ function ProjectsListPage() {
                   <IconButton
                     size="small"
                     onClick={() => navigate(`/project/${project.id}`)}
-                    title="View"
+                    title={t('projects.view')}
                   >
                     <Visibility fontSize="small" />
                   </IconButton>
                   <IconButton
                     size="small"
                     onClick={() => handleDelete(project.id)}
-                    title="Delete"
+                    title={t('projects.delete')}
                     color="error"
                   >
                     <Delete fontSize="small" />
@@ -210,7 +212,7 @@ function ProjectsListPage() {
             {projects.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  No projects yet. Create one to get started!
+                  {t('projects.noProjects')}
                 </TableCell>
               </TableRow>
             )}
