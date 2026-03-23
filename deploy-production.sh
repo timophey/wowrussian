@@ -304,6 +304,46 @@ show_summary() {
     echo "Deploy directory: $DEPLOY_DIR"
     echo "Log file: $LOG_FILE"
     echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🌐 ACCESSIBLE URLS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    # Determine frontend URL
+    local frontend_port="${FRONTEND_PORT:-3000}"
+    local server_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+    
+    echo "  Frontend (React App):"
+    echo "    • Local:    http://localhost:${frontend_port}"
+    echo "    • Network:  http://${server_ip}:${frontend_port}"
+    echo ""
+    
+    echo "  Backend API:"
+    echo "    • Local:    http://localhost:8000"
+    echo "    • Network:  http://${server_ip}:8000"
+    echo "    • Docs:     http://localhost:8000/docs"
+    echo "    • Health:   http://localhost:8000/health"
+    echo ""
+    
+    echo "  WebSocket:"
+    echo "    • ws://localhost:8000/ws/"
+    echo ""
+    
+    # Parse ALLOWED_ORIGINS if available
+    if [[ -n "$ALLOWED_ORIGINS" ]]; then
+        echo "  Allowed Origins (CORS):"
+        # Try to parse JSON array - handle both formats: ["url1","url2"] or url1,url2
+        local origins=$(echo "$ALLOWED_ORIGINS" | sed 's/\[//g; s/\]//g; s/"//g; s/ //g')
+        IFS=',' read -ra origin_array <<< "$origins"
+        for origin in "${origin_array[@]}"; do
+            [[ -n "$origin" ]] && echo "    • $origin"
+        done
+        echo ""
+    fi
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
     echo "Running containers:"
     $DOCKER_COMPOSE ps
     echo ""
@@ -313,7 +353,14 @@ show_summary() {
     echo "Docker disk usage:"
     docker system df
     echo ""
-    log_success "Deployment completed successfully!"
+    log_success "✅ Deployment completed successfully!"
+    echo ""
+    echo "📝 Next steps:"
+    echo "   • Check application logs: $DOCKER_COMPOSE logs -f"
+    echo "   • View backend logs:     $DOCKER_COMPOSE logs -f backend"
+    echo "   • View frontend logs:    $DOCKER_COMPOSE logs -f frontend"
+    echo "   • View celery logs:      $DOCKER_COMPOSE logs -f celery"
+    echo ""
 }
 
 # Main deployment function

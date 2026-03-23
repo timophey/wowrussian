@@ -63,17 +63,42 @@ sleep 10
 
 # Show status
 echo ""
-echo "=== Container Status ==="
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✅ DEPLOYMENT COMPLETE"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Get frontend port from environment
+local frontend_port="${FRONTEND_PORT:-3000}"
+local server_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+
+echo "  Accessible URLs:"
+echo "    • Frontend:  http://localhost:${frontend_port}"
+echo "    • Backend:   http://localhost:8000"
+echo "    • API Docs:  http://localhost:8000/docs"
+echo "    • Health:    http://localhost:8000/health"
+echo ""
+
+if [[ -n "$ALLOWED_ORIGINS" ]]; then
+    echo "  Allowed Origins (CORS):"
+    local origins=$(echo "$ALLOWED_ORIGINS" | sed 's/\[//g; s/\]//g; s/"//g; s/ //g')
+    IFS=',' read -ra origin_array <<< "$origins"
+    for origin in "${origin_array[@]}"; do
+        [[ -n "$origin" ]] && echo "    • $origin"
+    done
+    echo ""
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo "Container Status:"
 $DOCKER_COMPOSE ps
+echo ""
 
 # Cleanup old images
-echo ""
-echo "=== Cleaning up old Docker images ==="
+echo "Cleaning up old Docker images..."
 docker image prune -a -f
 
-# Optional: cleanup volumes (uncomment if needed)
-# docker volume prune -f
-
 echo ""
-echo "Deployment complete!"
-echo "Check logs: $DOCKER_COMPOSE logs -f"
+echo "✅ All done! Check logs with: $DOCKER_COMPOSE logs -f"
