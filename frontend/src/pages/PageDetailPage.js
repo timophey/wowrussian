@@ -152,7 +152,7 @@ function PageDetailPage() {
   const foreignPercentage = totalWords > 0 ? ((foreignWords / totalWords) * 100).toFixed(1) : 0;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 8 }}>
       <Box display="flex" alignItems="center" gap={2} mb={3}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate(`/project/${projectId}`)}>
           {t('page.backToProject')}

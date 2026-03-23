@@ -19,14 +19,23 @@ export const AuthProvider = ({ children }) => {
     // Check if user is already logged in
     const token = localStorage.getItem('access_token');
     if (token) {
-      const currentUser = authApi.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        authApi.logout();
-      }
+      authApi.getCurrentUser()
+        .then(response => {
+          if (response?.data) {
+            setUser(response.data);
+          } else {
+            authApi.logout();
+          }
+        })
+        .catch(() => {
+          authApi.logout();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
@@ -34,8 +43,8 @@ export const AuthProvider = ({ children }) => {
       const response = await authApi.login(email, password);
       const token = response.data.access_token;
       localStorage.setItem('access_token', token);
-      const currentUser = authApi.getCurrentUser();
-      setUser(currentUser);
+      const currentUserResponse = await authApi.getCurrentUser();
+      setUser(currentUserResponse.data);
       return { success: true };
     } catch (error) {
       return {

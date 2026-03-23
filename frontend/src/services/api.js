@@ -90,6 +90,10 @@ export const authApi = {
     });
   },
   register: (email, password) => api.post('/auth/register', { email, password }),
+  getCurrentUser: () => api.get('/auth/me'),
+  logout: () => {
+    setAuthToken(null);
+  },
 };
 
 // Admin API

@@ -335,7 +335,7 @@ function ProjectPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 8 }}>
       <Box sx={{ mb: 3 }}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate('/projects')} sx={{ mb: 2 }}>
           {t('project.backToProjects')}

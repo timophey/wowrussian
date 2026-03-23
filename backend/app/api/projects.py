@@ -1,5 +1,6 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, asc, desc
 import redis.asyncio as redis
@@ -18,6 +19,21 @@ from app.tasks import crawl_project
 from app.utils.db import safe_scalar
 from app.api.auth import get_current_user
 
+async def get_optional_user(
+    token: str | None,
+    db: AsyncSession
+) -> User | None:
+    """Get current user if token is valid, otherwise return None."""
+    if not token:
+        return None
+    try:
+        return await get_current_user(token, db)
+    except HTTPException:
+        return None
+
+# Optional auth: doesn't raise error if token is missing
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
@@ -30,15 +46,22 @@ async def get_redis():
 async def create_project(
     project: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User | None = Depends(lambda: None)  # Optional auth
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
     """Create a new project from URL.
     If user is authenticated, project belongs to them.
     If not, project belongs to default user (ID=1)."""
     from urllib.parse import urlparse
     
-    # Use authenticated user's ID or default to 1
-    user_id = current_user.id if current_user else 1
+    # Get user from token if provided
+    user_id = 1  # default user
+    if token:
+        try:
+            current_user = await get_current_user(token, db)
+            user_id = current_user.id
+        except HTTPException:
+            # Invalid token, use default user
+            user_id = 1
     
     # Ensure default user exists
     if user_id == 1:
@@ -85,11 +108,16 @@ async def create_project(
 @router.get("", response_model=List[ProjectResponse])
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional),
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", description="Sort order: asc or desc")
 ):
-    """List all projects for current user."""
+    """List all projects for current user or default user (for guests)."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    user_id = user.id if user else 1  # Use authenticated user or default user
+    
     # Validate sort_by parameter
     allowed_sort_fields = {
         "domain": Project.domain,
@@ -103,8 +131,8 @@ async def list_projects(
     # Validate sort_order
     order_func = asc if sort_order.lower() == "asc" else desc
     
-    # Build query with dynamic ordering - filter by authenticated user
-    query = select(Project).where(Project.user_id == current_user.id)
+    # Build query with dynamic ordering - filter by user
+    query = select(Project).where(Project.user_id == user_id)
     query = query.order_by(order_func(allowed_sort_fields[sort_by]))
     
     result = await db.execute(query)
@@ -144,15 +172,25 @@ async def list_projects(
 async def get_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
-    """Get project details with statistics."""
-    # Ensure project belongs to current user
+    """Get project details with statistics.
+    Allows access to projects belonging to the default user (ID=1) without authentication,
+    or to authenticated users' own projects."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    if user:
+        user_id = user.id
+    else:
+        user_id = 1  # For guests, only allow access to default user's projects
+    
+    # Ensure project belongs to the appropriate user
     project = await safe_scalar(
         db,
         select(Project).where(
             Project.id == project_id,
-            Project.user_id == current_user.id
+            Project.user_id == user_id
         )
     )
     if not project:
@@ -210,15 +248,22 @@ async def get_project(
 async def delete_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
-    """Delete project and all associated data."""
-    # Ensure project belongs to current user
+    """Delete project and all associated data.
+    Allows deletion of default user's projects without authentication,
+    or authenticated users' own projects."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    user_id = user.id if user else 1
+    
+    # Ensure project belongs to the appropriate user
     project = await safe_scalar(
         db,
         select(Project).where(
             Project.id == project_id,
-            Project.user_id == current_user.id
+            Project.user_id == user_id
         )
     )
     if not project:
@@ -239,15 +284,22 @@ async def delete_project(
 async def clear_project_pages(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
-    """Clear all pages and crawl queue for a project."""
-    # Ensure project belongs to current user
+    """Clear all pages and crawl queue for a project.
+    Allows clearing of default user's projects without authentication,
+    or authenticated users' own projects."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    user_id = user.id if user else 1
+    
+    # Ensure project belongs to the appropriate user
     project = await safe_scalar(
         db,
         select(Project).where(
             Project.id == project_id,
-            Project.user_id == current_user.id
+            Project.user_id == user_id
         )
     )
     if not project:
@@ -279,15 +331,22 @@ async def clear_project_pages(
 async def stop_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
-    """Stop project scanning."""
-    # Ensure project belongs to current user
+    """Stop project scanning.
+    Allows stopping of default user's projects without authentication,
+    or authenticated users' own projects."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    user_id = user.id if user else 1
+    
+    # Ensure project belongs to the appropriate user
     project = await safe_scalar(
         db,
         select(Project).where(
             Project.id == project_id,
-            Project.user_id == current_user.id
+            Project.user_id == user_id
         )
     )
     if not project:
@@ -303,15 +362,22 @@ async def stop_project(
 async def start_project(
     project_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user)  # Require authentication
+    token: str | None = Depends(oauth2_scheme_optional)
 ):
-    """Manually start project crawling."""
-    # Ensure project belongs to current user
+    """Manually start project crawling.
+    Allows starting of default user's projects without authentication,
+    or authenticated users' own projects."""
+    user = await get_optional_user(token, db)
+    
+    # Determine user_id to filter by
+    user_id = user.id if user else 1
+    
+    # Ensure project belongs to the appropriate user
     project = await safe_scalar(
         db,
         select(Project).where(
             Project.id == project_id,
-            Project.user_id == current_user.id
+            Project.user_id == user_id
         )
     )
     if not project:
