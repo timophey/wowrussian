@@ -86,3 +86,6 @@ htmlcov/
 # Misc
 .DS_Store
 .cache/
+
+# Deployment configuration
+deploy-config.sh
