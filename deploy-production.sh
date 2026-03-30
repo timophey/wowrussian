@@ -16,7 +16,8 @@ fi
 # Configuration
 APP_NAME="WowRussian"
 DEPLOY_DIR="/home/cloudpanel/domains/yourdomain.com/wowrussian"
-LOG_FILE="/var/log/wowrussian-deploy-$(date +%Y%m%d-%H%M%S).log"
+LOG_DIR="$DEPLOY_DIR/logs"
+LOG_FILE="$LOG_DIR/wowrussian-deploy-$(date +%Y%m%d-%H%M%S).log"
 ENV_FILE=".env"
 BACKUP_DIR="/backup/wowrussian"
 RETENTION_DAYS=7  # Keep logs and backups for this many days
@@ -107,6 +108,9 @@ check_permissions() {
 # Pre-deployment checks
 pre_deploy_check() {
     log_info "Running pre-deployment checks..."
+    
+    # Create log directory
+    mkdir -p "$LOG_DIR"
     
     # Check if we're in the correct directory
     if [[ ! -f "docker-compose.yml" ]]; then
@@ -319,7 +323,7 @@ cleanup_images() {
 cleanup_logs() {
     log_info "Cleaning up old deployment logs..."
     
-    find /var/log -name "wowrussian-deploy-*.log" -mtime +$RETENTION_DAYS -delete
+    find "$LOG_DIR" -name "wowrussian-deploy-*.log" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
     log_success "Old logs cleaned (retaining $RETENTION_DAYS days)"
 }
 
