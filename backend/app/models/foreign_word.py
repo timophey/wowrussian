@@ -14,6 +14,7 @@ class ForeignWord(Base):
     word = Column(String, nullable=False, index=True)
     count = Column(Integer, default=1, nullable=False)
     language_guess = Column(String, nullable=True)  # e.g., "en", "de", etc.
+    source = Column(String, nullable=True)  # 'fz168', 'dictionary', 'fallback', or None
 
     # Composite index for faster queries
     __table_args__ = (

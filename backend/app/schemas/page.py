@@ -39,6 +39,11 @@ class PageDetail(PageResponse):
     text_content: Optional[str] = None
     foreign_words: List[Dict[str, Any]] = []  # [{"word": "test", "count": 5, "language_guess": "en"}, ...]
     russian_words: List[Dict[str, Any]] = []  # [{"word": "привет", "count": 3, "source": "dictionary"}, ...]
+    # 168fz metadata
+    fz168_statistics: Optional[Dict[str, Any]] = None  # statistics from 168fz
+    fz168_summary: Optional[Dict[str, Any]] = None  # summary from 168fz
+    fz168_checks: Optional[Dict[str, Any]] = None  # checks (foreign_words, prohibited_words, etc.)
+    fz168_dictionaries: Optional[List[Dict[str, Any]]] = None  # list of dictionaries used
 
 # Alias for compatibility with __init__.py imports
 Page = PageResponse

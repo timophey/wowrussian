@@ -7,10 +7,11 @@ A web application for analyzing websites to detect foreign words and anglicisms.
 - Analyze any website by entering its URL
 - Crawl all pages within the same domain
 - Extract text content from HTML
-- Detect foreign words using normative RAS dictionaries (law №168-FZ compliant)
+- Detect foreign words using **168fz microservice** or local dictionaries (law №168-FZ compliant)
 - Real-time updates via WebSocket
 - View detailed statistics and word frequency
 - Multi-user support with isolated storage
+- **Graceful degradation** - falls back to local analysis if 168fz is unavailable
 
 ## Tech Stack
 
@@ -215,6 +216,11 @@ Environment variables:
 | `DICTIONARY_PATH` | Path to Russian words dictionary file | `/app/dictionaries/russian_words.txt` |
 | `DICTIONARY_URL` | URL to download dictionary from | `https://raw.githubusercontent.com/danakt/russian-words/master/russian.txt` |
 | `AUTO_DOWNLOAD_DICTIONARY` | Auto-download dictionary if not found | `True` |
+| **168fz Integration** |||
+| `USE_FZ168` | Enable 168fz microservice for enhanced detection | `True` |
+| `FZ168_URL` | URL of 168fz service | `http://fz168:8000` |
+| `FZ168_TIMEOUT` | Request timeout in seconds | `10` |
+| `FZ168_RETRY_ATTEMPTS` | Number of retry attempts | `3` |
 | `CRAWLER_DELAY` | Delay between requests (seconds) | `1` |
 | `CRAWLER_USER_AGENT` | User-Agent for crawler | `WowRussianBot/1.0` |
 
@@ -233,6 +239,49 @@ DATABASE_URL=postgresql+asyncpg://username:password@localhost:5432/database_name
 **MySQL:**
 ```env
 DATABASE_URL=mysql+aiomysql://username:password@localhost:3306/database_name
+```
+
+## 168fz Integration
+
+This project can integrate with the [168fz](https://github.com/timophey/168fz) microservice for enhanced foreign word detection compliant with Federal Law №168-FZ.
+
+### Features
+
+- **Advanced classification**: Detects prohibited words, foreign words with/without Russian alternatives
+- **Multiple dictionaries**: Uses official normative dictionaries and custom user dictionaries
+- **Risk assessment**: Provides risk level (low/medium/high) for each text
+- **Language detection**: Identifies language of foreign words
+
+### Configuration
+
+1. **Enable 168fz** in `.env`:
+   ```env
+   USE_FZ168=True
+   FZ168_URL=http://fz168:8000  # or your external server URL
+   ```
+
+2. **Deploy 168fz service**:
+   - **Option A (Docker Compose)**: Uncomment the `fz168` service in `docker-compose.yml`
+   - **Option B (External)**: Deploy 168fz separately and set `FZ168_URL` to its address
+
+3. **Run migrations** (automatic on startup) - new `source` field added to `foreign_words` table
+
+### Fallback Behavior
+
+If 168fz is unavailable (timeout, connection error, etc.), the system automatically falls back to the local dictionary-based analyzer. All operations continue without interruption.
+
+### Data Source Tracking
+
+The `source` field in `foreign_words` table indicates which analyzer detected the word:
+- `fz168` - detected by 168fz service
+- `dictionary` - from main Russian dictionary (local fallback)
+- `fallback` - from built-in minimal dictionary (local fallback)
+
+### Disabling 168fz
+
+To use only the local analyzer:
+```env
+USE_FZ168=False
 ```
 
 ## Deployment on CloudPanel

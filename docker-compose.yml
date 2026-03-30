@@ -12,6 +12,25 @@ services:
     networks:
       - wowrussian_network
 
+  # 168fz Checker Service (for enhanced foreign word detection)
+  fz168:
+    image: timophey/168fz:latest
+    container_name: wowrussian_fz168
+    ports:
+      - "8169:8000"
+    volumes:
+      - ./dictionaries:/app/dictionaries
+    environment:
+      - ADMIN_KEY=${FZ168_ADMIN_KEY:-}
+      - DEBUG=false
+    networks:
+      - wowrussian_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # PostgreSQL Database (Recommended for production)
   postgres:
     image: postgres:15-alpine
@@ -73,6 +92,9 @@ services:
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-admin-secret-change-this}
       - DEBUG=${DEBUG:-True}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["http://localhost:3000","http://localhost:8000"]}
+      # 168fz integration
+      - USE_FZ168=${USE_FZ168:-True}
+      - FZ168_URL=${FZ168_URL:-http://fz168:8000}
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
@@ -103,6 +125,9 @@ services:
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-admin-secret-change-this}
       - DEBUG=${DEBUG:-True}
+      # 168fz integration
+      - USE_FZ168=${USE_FZ168:-True}
+      - FZ168_URL=${FZ168_URL:-http://fz168:8000}
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
@@ -113,6 +138,7 @@ services:
       # Uncomment the database you want to use:
       - postgres
       # - mysql
+      - fz168
     command: celery -A app.tasks worker --loglevel=info --concurrency=2
     networks:
       - wowrussian_network

@@ -1,6 +1,6 @@
 from datetime import datetime
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -28,6 +28,12 @@ class Page(Base):
     status = Column(SQLEnum(PageStatus), default=PageStatus.QUEUED, nullable=False)
     words_count = Column(Integer, default=0)
     foreign_words_count = Column(Integer, default=0)
+    # 168fz metadata
+    fz168_statistics = Column(JSON, nullable=True)  # data.statistics from 168fz
+    fz168_summary = Column(JSON, nullable=True)  # data.summary from 168fz
+    fz168_checks = Column(JSON, nullable=True)  # data.checks from 168fz
+    fz168_dictionaries = Column(JSON, nullable=True)  # data.dictionaries_used from 168fz
+    fz168_raw_response = Column(JSON, nullable=True)  # complete raw response from 168fz API
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -139,4 +139,14 @@ export const guestApi = {
   validateSession: (token) => api.get(`/guest/sessions/${token}`),
 };
 
+// Single Analysis API
+export const singleApi = {
+  check: (url) => api.post('/single/check', { url }, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  }),
+};
+
 export default api;

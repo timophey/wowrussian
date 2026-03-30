@@ -9,7 +9,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Chip,
@@ -22,8 +21,18 @@ import {
   DialogTitle,
   DialogContent,
   IconButton,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Grid,
+  Card,
+  CardContent,
 } from '@mui/material';
-import { ArrowBack, Visibility, Code } from '@mui/icons-material';
+import { ArrowBack, Visibility, Code, ExpandMore, Assessment, MenuBook, CheckCircle, Warning } from '@mui/icons-material';
 import { pageApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -286,6 +295,131 @@ function PageDetailPage() {
     ) : (
       <Typography color="text.secondary">{t('page.noRussianWords')}</Typography>
     )}
+
+    {/* 168-FZ Metadata Section */}
+    {(page.fz168_statistics || page.fz168_summary || page.fz168_checks || page.fz168_dictionaries) ? (
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          {t('fz168.title')}
+        </Typography>
+
+        {/* Summary Panel */}
+        <Accordion defaultExpanded>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Assessment />
+              <Typography>{t('fz168.summary')}</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            {page.fz168_summary && Object.keys(page.fz168_summary).length > 0 ? (
+              <Grid container spacing={2}>
+                {Object.entries(page.fz168_summary).map(([key, value]) => (
+                  <Grid item xs={6} sm={3} key={key}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          {t(`fz168.${key}`, { defaultValue: key.replace(/_/g, ' ') })}
+                        </Typography>
+                        <Typography variant="h6">{value}</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Checks Panel */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <CheckCircle />
+              <Typography>{t('fz168.checks')}</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            {page.fz168_checks && Object.keys(page.fz168_checks).length > 0 ? (
+              <List>
+                {Object.entries(page.fz168_checks).map(([key, check]) => (
+                  <React.Fragment key={key}>
+                    <ListItem>
+                      <ListItemText
+                        primary={key}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="textSecondary">
+                              {t('fz168.dictionary')}: {check.dictionary || '-'}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {t('fz168.explanation')}: {check.explanation || '-'}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {t('fz168.lawArticle')}: {check.law_article || '-'}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Statistics Panel */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <MenuBook />
+              <Typography>{t('fz168.statistics')}</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            {page.fz168_statistics ? (
+              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                {JSON.stringify(page.fz168_statistics, null, 2)}
+              </pre>
+            ) : (
+              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Dictionaries Panel */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Warning />
+              <Typography>{t('fz168.dictionaries')}</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            {page.fz168_dictionaries && page.fz168_dictionaries.length > 0 ? (
+              <List>
+                {page.fz168_dictionaries.map((dict, idx) => (
+                  <ListItem key={idx}>
+                    <ListItemText
+                      primary={dict.name || dict.id}
+                      secondary={`${t('fz168.dictionary')}: ${dict.type || 'unknown'}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+      </Box>
+    ) : null}
 
     {/* HTML Dialog */}
       <Dialog open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>

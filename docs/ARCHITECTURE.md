@@ -109,11 +109,13 @@ WowRussian Analyzer is a distributed web application for crawling websites and a
 
 ### Word Analyzer
 
+#### Legacy Local Analyzer
+
 **Responsibilities:**
 - Load Russian language dictionary from file or download automatically
 - Tokenize and analyze text for foreign words
 - Detect language of foreign words using langdetect
-- Comply with law №168-FZ requirements using normative dictionaries
+- Basic compliance with law №168-FZ requirements
 
 **Key Features:**
 - **Dictionary Management**: Automatically downloads dictionary if not present (configurable)
@@ -139,6 +141,46 @@ WowRussian Analyzer is a distributed web application for crawling websites and a
    - Else if contains Latin characters → mark as foreign, detect language
    - Else (Cyrillic but not in dictionary) → mark as Russian (conservative)
 3. Aggregate statistics (total, foreign, unique foreign words, frequency)
+
+#### Hybrid Word Analyzer (with 168fz)
+
+**Responsibilities:**
+- Provide enhanced analysis using 168fz microservice
+- Implement graceful degradation to local analyzer
+- Track word source for analytics (fz168 vs local)
+
+**Architecture:**
+```
+HybridWordAnalyzer
+├── Primary: FZ168Client (HTTP async)
+│   └── Retry logic (configurable attempts)
+│   └── Timeout protection
+└── Fallback: LocalWordAnalyzer
+    └── Wraps legacy WordAnalyzer
+    └── Runs in thread pool (non-blocking)
+```
+
+**Configuration:**
+- `USE_FZ168`: Enable/disable 168fz integration (default: True)
+- `FZ168_URL`: URL of 168fz service (default: http://fz168:8000)
+- `FZ168_TIMEOUT`: Request timeout in seconds (default: 10)
+- `FZ168_RETRY_ATTEMPTS`: Number of retry attempts (default: 3)
+
+**Response Mapping:**
+168fz statuses are mapped to WowRussian format:
+- `russian`, `allowed` → `is_foreign=False`, `source='fz168'`
+- `foreign`, `foreign_with_alternative`, `prohibited` → `is_foreign=True`, `source='fz168'`
+
+**Fallback Behavior:**
+- If 168fz is disabled → use local immediately
+- If 168fz fails (timeout, error, unavailable) → automatic fallback to local
+- All fallbacks are logged for monitoring
+
+**Data Source Tracking:**
+The `source` field in `foreign_words` table indicates the analyzer:
+- `fz168` - from 168fz service
+- `dictionary` - from main Russian dictionary (local)
+- `fallback` - from built-in minimal dictionary (local)
 
 ### Database (SQLite)
 
@@ -182,6 +224,7 @@ foreign_words (
   word VARCHAR,
   count INTEGER,
   language_guess VARCHAR,
+  source VARCHAR,  -- 'fz168', 'dictionary', 'fallback', or NULL
   UNIQUE(page_id, word)
 )
 
@@ -369,8 +412,9 @@ GET /health
 4. **Comparison**: Compare different crawls of same site
 5. **API Keys**: For external integrations
 6. **Content Checker Integration**: Integration with https://content-checker.ru/ for official compliance verification
-7. **Normative Dictionaries Support**: Direct integration with RAS normative dictionaries (Orthoepic, Foreign Words, Explanatory)
-8. **Custom Dictionaries**: Per-user custom word lists
-9. **GraphQL API**: Alternative to REST
-10. **Microservices**: Split crawler, analyzer into separate services
-11. **Message Queue**: RabbitMQ as alternative to Redis
+7. **168fz Integration**: ✅ **Implemented** - Enhanced analysis with 168fz microservice (graceful degradation, configurable)
+8. **Normative Dictionaries Support**: Direct integration with RAS normative dictionaries (Orthoepic, Foreign Words, Explanatory)
+9. **Custom Dictionaries**: Per-user custom word lists
+10. **GraphQL API**: Alternative to REST
+11. **Microservices**: Split crawler, analyzer into separate services
+12. **Message Queue**: RabbitMQ as alternative to Redis

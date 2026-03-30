@@ -183,7 +183,12 @@ async def get_page(
         russian_words=[
             {"word": rw.word, "count": rw.count, "source": rw.source}
             for rw in russian_words
-        ]
+        ],
+        # Include 168fz metadata if available
+        fz168_statistics=page.fz168_statistics,
+        fz168_summary=page.fz168_summary,
+        fz168_checks=page.fz168_checks,
+        fz168_dictionaries=page.fz168_dictionaries
     )
     
     # Load HTML and text content from files

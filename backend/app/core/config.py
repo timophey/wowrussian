@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     dictionary_url: str = Field(default="https://raw.githubusercontent.com/danakt/russian-words/master/russian.txt", env="DICTIONARY_URL")
     auto_download_dictionary: bool = Field(default=True, env="AUTO_DOWNLOAD_DICTIONARY")
 
+    # 168fz integration settings
+    use_fz168: bool = Field(default=True, env="USE_FZ168")
+    fz168_url: str = Field(default="http://localhost:8169", env="FZ168_URL")
+    fz168_timeout: int = Field(default=10, env="FZ168_TIMEOUT")
+    fz168_retry_attempts: int = Field(default=3, env="FZ168_RETRY_ATTEMPTS")
+
     class Config:
         env_file = ".env"
         case_sensitive = False

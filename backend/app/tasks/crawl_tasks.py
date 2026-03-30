@@ -17,7 +17,7 @@ from app.models.crawl_queue import CrawlQueue, QueueStatus
 from app.models.user import User
 from app.services.crawler import Crawler
 from app.services.parser import HTMLParser
-from app.services.analyzer import WordAnalyzer
+from app.services.word_analyzer_interface import HybridWordAnalyzer
 from app.services.file_storage import FileStorage
 from app.utils.db import safe_scalar
 
@@ -70,29 +70,51 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
     words = text_content.split()
     page.words_count = len(words)
     
-    # Analyze foreign words
-    analyzer = WordAnalyzer()
-    analysis = analyzer.analyze(text_content)
+    # Analyze foreign words using hybrid analyzer (168fz with fallback)
+    import sys
+    print(f"\n\n*** ANALYZING PAGE {page.id} with text length {len(text_content)} ***\n", file=sys.stderr)
+    analyzer = HybridWordAnalyzer()
+    analysis = await analyzer.analyze(text_content)
     page.foreign_words_count = analysis['foreign_words']
+    
+    # Save 168fz metadata if available (when 168fz was used)
+    if 'fz168_metadata' in analysis:
+        page.fz168_statistics = analysis['fz168_metadata']['statistics']
+        page.fz168_summary = analysis['fz168_metadata']['summary']
+        page.fz168_checks = analysis['fz168_metadata']['checks']
+        page.fz168_dictionaries = analysis['fz168_metadata']['dictionaries']
+    
+    # Save complete raw 168fz response if available
+    if 'fz168_raw_response' in analysis:
+        page.fz168_raw_response = analysis['fz168_raw_response']
     
     # Delete existing foreign words for this page to avoid duplicates on restart
     await db.execute(
         delete(ForeignWord).where(ForeignWord.page_id == page.id)
     )
     
-    # Create a mapping of word to language_guess from detected_words
+    # Create mappings from detected_words
     language_map = {}
+    source_map = {}
     for detected in analysis['detected_words']:
         if detected['is_foreign']:
-            language_map[detected['word']] = detected['language_guess']
+            language_map[detected['word']] = detected.get('language_guess')
+            source_map[detected['word']] = detected.get('source')
     
-    # Save foreign words with proper language detection
+    # DEBUG: Log mapping info
+    import sys
+    print(f"[DEBUG] detected_words count: {len(analysis['detected_words'])}, foreign count: {sum(1 for d in analysis['detected_words'] if d['is_foreign'])}", file=sys.stderr)
+    print(f"[DEBUG] source_map sample: {dict(list(source_map.items())[:5])}", file=sys.stderr)
+    print(f"[DEBUG] foreign_word_frequency sample: {dict(list(analysis['foreign_word_frequency'].items())[:5])}", file=sys.stderr)
+    
+    # Save foreign words with proper language detection and source
     for word, count in analysis['foreign_word_frequency'].items():
         fw = ForeignWord(
             page_id=page.id,
             word=word,
             count=count,
-            language_guess=language_map.get(word)  # Use detected language or None
+            language_guess=language_map.get(word),
+            source=source_map.get(word)
         )
         db.add(fw)
     
@@ -103,7 +125,7 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
     
     # Save russian words with source information
     for word, count in analysis['russian_word_frequency'].items():
-        # Find source from detected_words
+        # Find source from detected_words (already built source_map for foreign, need to build for russian)
         source = None
         for detected in analysis['detected_words']:
             if detected['word'] == word and not detected['is_foreign']:
@@ -325,29 +347,43 @@ async def _parse_and_analyze_page_async(page_id: int):
         words = text_content.split()
         page.words_count = len(words)
         
-        # Analyze foreign words
-        analyzer = WordAnalyzer()
-        analysis = analyzer.analyze(text_content)
+        # Analyze foreign words using hybrid analyzer (168fz with fallback)
+        analyzer = HybridWordAnalyzer()
+        analysis = await analyzer.analyze(text_content)
         page.foreign_words_count = analysis['foreign_words']
+        
+        # Save 168fz metadata if available (when 168fz was used)
+        if 'fz168_metadata' in analysis:
+            page.fz168_statistics = analysis['fz168_metadata']['statistics']
+            page.fz168_summary = analysis['fz168_metadata']['summary']
+            page.fz168_checks = analysis['fz168_metadata']['checks']
+            page.fz168_dictionaries = analysis['fz168_metadata']['dictionaries']
+        
+        # Save complete raw 168fz response if available
+        if 'fz168_raw_response' in analysis:
+            page.fz168_raw_response = analysis['fz168_raw_response']
         
         # Delete existing foreign words for this page to avoid duplicates on restart
         await db.execute(
             delete(ForeignWord).where(ForeignWord.page_id == page.id)
         )
         
-        # Create a mapping of word to language_guess from detected_words
+        # Create mappings from detected_words
         language_map = {}
+        source_map = {}
         for detected in analysis['detected_words']:
             if detected['is_foreign']:
-                language_map[detected['word']] = detected['language_guess']
+                language_map[detected['word']] = detected.get('language_guess')
+                source_map[detected['word']] = detected.get('source')
         
-        # Save foreign words with proper language detection
+        # Save foreign words with proper language detection and source
         for word, count in analysis['foreign_word_frequency'].items():
             fw = ForeignWord(
                 page_id=page.id,
                 word=word,
                 count=count,
-                language_guess=language_map.get(word)  # Use detected language or None
+                language_guess=language_map.get(word),
+                source=source_map.get(word)
             )
             db.add(fw)
         
