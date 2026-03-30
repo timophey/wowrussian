@@ -31,11 +31,16 @@
 
 ### 🐳 Запуск через Docker (рекомендуемый способ)
 
-#### 1. Клонируйте репозиторий
+#### 1. Клонируйте репозиторий **с субмодулями**
 
 ```bash
-git clone <repository-url>
+git clone --recurse-submodules <repository-url>
 cd wowrussian
+```
+
+**Если вы уже клонировали без субмодулей**, инициализируйте их:
+```bash
+git submodule update --init --recursive
 ```
 
 #### 2. Настройте переменные окружения
@@ -333,7 +338,7 @@ DATABASE_URL=mysql+aiomysql://username:password@localhost:3306/database_name
    ```
 
 2. **Разверните сервис 168fz**:
-   - **Вариант A (Docker Compose)**: раскомментируйте сервис `fz168` в `docker-compose.yml`
+   - **Вариант A (Docker Compose)**: сервис `fz168` уже настроен в `docker-compose.yml` (включен по умолчанию). Убедитесь, что субмодуль инициализирован.
    - **Вариант B (Внешний)**: разверните 168fz отдельно и укажите его адрес в `FZ168_URL`
 
 3. **Запустите миграции** (выполняются автоматически) - добавляется поле `source` в таблицу `foreign_words`
@@ -464,6 +469,48 @@ MIT License. См. файл [LICENSE](LICENSE) для подробностей.
 - [Material-UI](https://mui.com/) — компоненты интерфейса
 - [Celery](https://docs.celeryq.dev/) — асинхронные задачи
 - [Russian Words Dictionary](https://github.com/danakt/russian-words) — словарь русского языка
+
+---
+
+## 📦 Git Submodules
+
+Этот репозиторий использует git submodules для микросервиса 168fz.
+
+### Клонирование
+
+Клонировать с субмодулями:
+```bash
+git clone --recurse-submodules https://github.com/timophey/wowrussian.git
+cd wowrussian
+```
+
+Или инициализировать после клонирования:
+```bash
+git submodule update --init --recursive
+```
+
+### Обновление субмодуля
+
+Чтобы обновить субмодуль 168fz до последней версии:
+
+```bash
+cd 168fz
+git pull origin master
+cd ..
+git add 168fz
+git commit -m "Update 168fz submodule to latest version"
+git push
+```
+
+### Развертывание с субмодулями
+
+На сервере развертывания после `git pull` всегда выполняйте:
+
+```bash
+git submodule update --init --recursive
+```
+
+Или используйте предоставленные скрипты развертывания, которые автоматически обрабатывают субмодули.
 
 ---
 

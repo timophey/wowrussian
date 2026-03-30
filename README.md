@@ -108,10 +108,15 @@ docker-compose up -d
 
 ### Production Deployment
 
-1. Clone the repository:
+1. Clone the repository **with submodules**:
 ```bash
-git clone <repository-url>
+git clone --recurse-submodules <repository-url>
 cd wowrussian
+```
+
+**If you already cloned without submodules**, initialize them:
+```bash
+git submodule update --init --recursive
 ```
 
 2. Copy environment file:
@@ -261,7 +266,7 @@ This project can integrate with the [168fz](https://github.com/timophey/168fz) m
    ```
 
 2. **Deploy 168fz service**:
-   - **Option A (Docker Compose)**: Uncomment the `fz168` service in `docker-compose.yml`
+   - **Option A (Docker Compose)**: The `fz168` service is already configured in `docker-compose.yml` (enabled by default). Just ensure the submodule is initialized.
    - **Option B (External)**: Deploy 168fz separately and set `FZ168_URL` to its address
 
 3. **Run migrations** (automatic on startup) - new `source` field added to `foreign_words` table
@@ -329,3 +334,43 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Git Submodules
+
+This repository uses git submodules for the 168fz microservice.
+
+### Cloning
+
+Clone with submodules:
+```bash
+git clone --recurse-submodules https://github.com/timophey/wowrussian.git
+cd wowrussian
+```
+
+Or initialize after cloning:
+```bash
+git submodule update --init --recursive
+```
+
+### Updating the Submodule
+
+To update the 168fz submodule to its latest version:
+
+```bash
+cd 168fz
+git pull origin master
+cd ..
+git add 168fz
+git commit -m "Update 168fz submodule to latest version"
+git push
+```
+
+### Deploying with Submodules
+
+On the deployment server, after `git pull`, always run:
+
+```bash
+git submodule update --init --recursive
+```
+
+Or use the provided deployment scripts which handle submodules automatically.
