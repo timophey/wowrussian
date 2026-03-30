@@ -58,6 +58,7 @@ function SinglePage() {
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('word');
   const [filterWord, setFilterWord] = useState('');
+  const [activeStatusFilter, setActiveStatusFilter] = useState(null);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,6 +77,7 @@ function SinglePage() {
     setError('');
     setLoading(true);
     setShowResults(false);
+    setActiveStatusFilter(null);
     
     try {
       const response = await singleApi.check(fullUrl);
@@ -98,12 +100,21 @@ function SinglePage() {
     setShowResults(false);
     setError('');
     setFilterWord('');
+    setActiveStatusFilter(null);
   };
   
   const handleSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+  };
+
+  const handleStatusFilterClick = (status) => {
+    if (activeStatusFilter === status) {
+      setActiveStatusFilter(null);
+    } else {
+      setActiveStatusFilter(status);
+    }
   };
 
   // Helper to get sort value for recommendation column
@@ -123,9 +134,11 @@ function SinglePage() {
   const sourceInfo = data.source_info;
   
   // Filter words
-  const filteredWords = allWords.filter(wordData => 
-    wordData.word.toLowerCase().includes(filterWord.toLowerCase())
-  );
+  const filteredWords = allWords.filter(wordData => {
+    const matchesText = wordData.word.toLowerCase().includes(filterWord.toLowerCase());
+    const matchesStatus = activeStatusFilter ? wordData.status === activeStatusFilter : true;
+    return matchesText && matchesStatus;
+  });
   
   // Sort words
   const sortedWords = [...filteredWords].sort((a, b) => {
@@ -365,13 +378,19 @@ function SinglePage() {
                     acc[w.status] = (acc[w.status] || 0) + 1;
                     return acc;
                   }, {})
-                ).map(([status, count]) => (
-                  <Chip
-                    key={status}
-                    label={`${getStatusBadge(status).props.label}: ${count.toLocaleString()}`}
-                    variant="outlined"
-                  />
-                ))}
+                ).map(([status, count]) => {
+                  const isActive = activeStatusFilter === status;
+                  return (
+                    <Chip
+                      key={status}
+                      label={`${getStatusBadge(status).props.label}: ${count.toLocaleString()}`}
+                      variant={isActive ? "filled" : "outlined"}
+                      color={isActive ? getStatusBadge(status).props.color : "default"}
+                      onClick={() => handleStatusFilterClick(status)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  );
+                })}
               </Box>
             </Paper>
           )}
