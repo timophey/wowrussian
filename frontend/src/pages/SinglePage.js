@@ -54,8 +54,8 @@ function SinglePage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
+    <Container data-block="single-page-container" maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box data-block="single-page-header" display="flex" alignItems="center" gap={2} mb={3}>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/')}
@@ -69,7 +69,7 @@ function SinglePage() {
       </Box>
       
       {/* URL Input Form */}
-      <Paper sx={{ p: 3, mb: 4 }}>
+      <Paper data-block="single-analysis-form" sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" gutterBottom>
           {t('single.urlLabel')}
         </Typography>
@@ -79,6 +79,7 @@ function SinglePage() {
         
         <form onSubmit={handleSubmit}>
           <TextField
+            data-block="url-input"
             fullWidth
             label={t('single.urlLabel')}
             value={url}
@@ -102,8 +103,9 @@ function SinglePage() {
             }}
           />
           
-          <Box display="flex" gap={2}>
+          <Box data-block="form-buttons" display="flex" gap={2}>
             <Button
+              data-block="analyze-button"
               type="submit"
               variant="contained"
               startIcon={loading ? <CircularProgress size={20} /> : <Search />}
@@ -112,6 +114,7 @@ function SinglePage() {
               {loading ? t('single.analyzing') : t('single.analyzeButton')}
             </Button>
             <Button
+              data-block="clear-button"
               variant="outlined"
               startIcon={<Clear />}
               onClick={handleClear}
@@ -121,6 +124,7 @@ function SinglePage() {
             </Button>
             {results && (
               <Button
+                data-block="download-button"
                 variant="outlined"
                 startIcon={<Visibility />}
                 onClick={downloadReport}

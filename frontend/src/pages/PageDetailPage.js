@@ -166,8 +166,8 @@ function PageDetailPage() {
   const foreignPercentage = totalWords > 0 ? ((foreignWords / totalWords) * 100).toFixed(1) : 0;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 8 }}>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
+    <Container data-block="page-detail-container" maxWidth="lg" sx={{ mt: 8 }}>
+      <Box data-block="page-detail-header" display="flex" alignItems="center" gap={2} mb={3}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate(`/project/${projectId}`)}>
           {t('page.backToProject')}
         </Button>
@@ -181,13 +181,13 @@ function PageDetailPage() {
         {page?.url}
       </Typography>
 
-      <Box sx={{ mb: 3 }}>
+      <Box data-block="page-status-badge" sx={{ mb: 3 }}>
         <Chip label={getStatusLabel(page?.status)} color="primary" />
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid data-block="page-stats" container spacing={3} sx={{ mb: 4 }}>
         <Box sx={{ width: '100%' }}>
-          <Paper sx={{ p: 2 }}>
+          <Paper data-block="stats-paper" sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               {t('page.statistics')}
             </Typography>
@@ -200,8 +200,9 @@ function PageDetailPage() {
         </Box>
       </Grid>
 
-      <Box display="flex" gap={2} mb={3}>
+      <Box data-block="view-buttons" display="flex" gap={2} mb={3}>
         <Button
+          data-block="view-html-button"
           variant="outlined"
           startIcon={<Code />}
           onClick={handleViewHtml}
@@ -209,6 +210,7 @@ function PageDetailPage() {
           {t('page.viewHtml')}
         </Button>
         <Button
+          data-block="view-text-button"
           variant="outlined"
           startIcon={<Visibility />}
           onClick={handleViewText}
@@ -222,7 +224,7 @@ function PageDetailPage() {
       </Typography>
 
       {page?.foreign_words && page.foreign_words.length > 0 ? (
-        <TableContainer component={Paper}>
+        <TableContainer data-block="foreign-words-table" component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -261,7 +263,7 @@ function PageDetailPage() {
       {t('page.russianWordsFound')}
     </Typography>
     {page?.russian_words && page.russian_words.length > 0 ? (
-      <TableContainer component={Paper}>
+      <TableContainer data-block="russian-words-table" component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -298,13 +300,13 @@ function PageDetailPage() {
 
     {/* 168-FZ Metadata Section */}
     {(page.fz168_statistics || page.fz168_summary || page.fz168_checks || page.fz168_dictionaries) ? (
-      <Box sx={{ mt: 4, mb: 4 }}>
+      <Box data-block="fz168-section" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h5" gutterBottom>
           {t('fz168.title')}
         </Typography>
 
         {/* Summary Panel */}
-        <Accordion defaultExpanded>
+        <Accordion data-block="fz168-summary-accordion" defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Box display="flex" alignItems="center" gap={1}>
               <Assessment />
@@ -316,7 +318,7 @@ function PageDetailPage() {
               <Grid container spacing={2}>
                 {Object.entries(page.fz168_summary).map(([key, value]) => (
                   <Grid item xs={6} sm={3} key={key}>
-                    <Card variant="outlined">
+                    <Card data-block={`fz168-summary-card-${key}`} variant="outlined">
                       <CardContent>
                         <Typography color="textSecondary" gutterBottom>
                           {t(`fz168.${key}`, { defaultValue: key.replace(/_/g, ' ') })}
@@ -334,7 +336,7 @@ function PageDetailPage() {
         </Accordion>
 
         {/* Checks Panel */}
-        <Accordion>
+        <Accordion data-block="fz168-checks-accordion">
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Box display="flex" alignItems="center" gap={1}>
               <CheckCircle />
@@ -375,7 +377,7 @@ function PageDetailPage() {
         </Accordion>
 
         {/* Statistics Panel */}
-        <Accordion>
+        <Accordion data-block="fz168-statistics-accordion">
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Box display="flex" alignItems="center" gap={1}>
               <MenuBook />
@@ -394,7 +396,7 @@ function PageDetailPage() {
         </Accordion>
 
         {/* Dictionaries Panel */}
-        <Accordion>
+        <Accordion data-block="fz168-dictionaries-accordion">
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Box display="flex" alignItems="center" gap={1}>
               <Warning />
@@ -422,7 +424,7 @@ function PageDetailPage() {
     ) : null}
 
     {/* HTML Dialog */}
-      <Dialog open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog data-block="html-dialog" open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('dialogs.htmlContent')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto', bgcolor: 'grey.100' }}>
@@ -434,7 +436,7 @@ function PageDetailPage() {
       </Dialog>
 
       {/* Text Dialog */}
-      <Dialog open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog data-block="text-dialog" open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('page.extractedText')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto' }}>

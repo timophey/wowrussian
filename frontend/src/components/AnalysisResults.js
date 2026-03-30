@@ -143,7 +143,7 @@ function AnalysisResults({ results, onDownload }) {
     <>
       {/* Source Info */}
       {sourceInfo && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert data-block="source-info" severity="info" sx={{ mb: 3 }}>
           <strong>{t('single.sourceInfo')}:</strong> {sourceInfo.type === 'url' ? (
             <span>
               URL: <a href={sourceInfo.url} target="_blank" rel="noopener noreferrer">{sourceInfo.url}</a>
@@ -157,9 +157,9 @@ function AnalysisResults({ results, onDownload }) {
       )}
 
       {/* Statistics Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid data-block="stats-grid" container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
-          <Card>
+          <Card data-block="stat-card-total-words">
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4">{stats.total_words?.toLocaleString() || 0}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -169,7 +169,7 @@ function AnalysisResults({ results, onDownload }) {
           </Card>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Card>
+          <Card data-block="stat-card-unique-words">
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4">{stats.unique_words?.toLocaleString() || 0}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -179,7 +179,7 @@ function AnalysisResults({ results, onDownload }) {
           </Card>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Card>
+          <Card data-block="stat-card-risk-level">
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" color={getRiskColor(summary.risk_level)}>
                 {getRiskLabel(summary.risk_level)}
@@ -191,7 +191,7 @@ function AnalysisResults({ results, onDownload }) {
           </Card>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Card>
+          <Card data-block="stat-card-violations">
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4">{summary.violation_count || 0}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -204,7 +204,7 @@ function AnalysisResults({ results, onDownload }) {
 
       {/* Status Summary */}
       {allWords.length > 0 && (
-        <Paper sx={{ p: 2, mb: 3 }}>
+        <Paper data-block="status-summary" sx={{ p: 2, mb: 3 }}>
           <Typography variant="subtitle1" gutterBottom>
             {t('single.statusSummary')}
           </Typography>
@@ -233,12 +233,13 @@ function AnalysisResults({ results, onDownload }) {
 
       {/* Words Table */}
       {allWords.length > 0 && (
-        <Paper sx={{ mb: 3 }}>
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Paper data-block="words-table-paper" sx={{ mb: 3 }}>
+          <Box data-block="words-table-header" sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle1">
               {t('single.allWords')} ({filteredWords.length})
             </Typography>
             <TextField
+              data-block="word-filter-input"
               size="small"
               placeholder={t('single.wordFilterPlaceholder')}
               value={filterWord}
@@ -253,7 +254,7 @@ function AnalysisResults({ results, onDownload }) {
             />
           </Box>
 
-          <TableContainer sx={{ maxHeight: 500 }}>
+          <TableContainer data-block="words-table" sx={{ maxHeight: 500 }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
@@ -347,7 +348,7 @@ function AnalysisResults({ results, onDownload }) {
       )}
 
       {/* Accordions for detailed info */}
-      <Accordion sx={{ mb: 2 }}>
+      <Accordion data-block="summary-accordion" sx={{ mb: 2 }}>
         <AccordionSummary expandIcon={<ExpandMore />}>
           <Box display="flex" alignItems="center" gap={1}>
             <Assessment />
@@ -365,7 +366,7 @@ function AnalysisResults({ results, onDownload }) {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion sx={{ mb: 2 }}>
+      <Accordion data-block="checks-accordion" sx={{ mb: 2 }}>
         <AccordionSummary expandIcon={<ExpandMore />}>
           <Box display="flex" alignItems="center" gap={1}>
             <CheckCircle />
@@ -374,7 +375,7 @@ function AnalysisResults({ results, onDownload }) {
         </AccordionSummary>
         <AccordionDetails>
           {checks.prohibited_words && checks.prohibited_words.length > 0 ? (
-            <Paper variant="outlined" sx={{ mb: 2, borderColor: 'error.main' }}>
+            <Paper data-block="prohibited-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'error.main' }}>
               <Paper sx={{ bgcolor: 'error.main', color: 'white', p: 1 }}>
                 <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   ⚠️ {t('fz168.prohibitedWords', { defaultValue: 'Запрещенные слова' })} ({checks.prohibited_words.length})
@@ -404,7 +405,7 @@ function AnalysisResults({ results, onDownload }) {
           ) : null}
 
           {checks.foreign_words && checks.foreign_words.length > 0 ? (
-            <Paper variant="outlined" sx={{ mb: 2, borderColor: 'warning.main' }}>
+            <Paper data-block="foreign-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'warning.main' }}>
               <Paper sx={{ bgcolor: 'warning.main', color: 'text.primary', p: 1 }}>
                 <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   🌐 {t('fz168.foreignWords', { defaultValue: 'Иностранные слова' })} ({checks.foreign_words.length})
@@ -434,7 +435,7 @@ function AnalysisResults({ results, onDownload }) {
           ) : null}
 
           {checks.normative_violations && checks.normative_violations.length > 0 ? (
-            <Paper variant="outlined" sx={{ mb: 2, borderColor: 'info.main' }}>
+            <Paper data-block="normative-violations-section" variant="outlined" sx={{ mb: 2, borderColor: 'info.main' }}>
               <Paper sx={{ bgcolor: 'info.main', color: 'white', p: 1 }}>
                 <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   📚 {t('fz168.normativeViolations', { defaultValue: 'Нарушения норм' })} ({checks.normative_violations.length})
@@ -464,7 +465,7 @@ function AnalysisResults({ results, onDownload }) {
           ) : null}
 
           {checks.recommendations && checks.recommendations.length > 0 ? (
-            <Paper variant="outlined" sx={{ p: 2 }}>
+            <Paper data-block="recommendations-section" variant="outlined" sx={{ p: 2 }}>
               <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 💡 {t('fz168.recommendations', { defaultValue: 'Рекомендации' })}
               </Typography>
@@ -485,7 +486,7 @@ function AnalysisResults({ results, onDownload }) {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion sx={{ mb: 2 }}>
+      <Accordion data-block="statistics-accordion" sx={{ mb: 2 }}>
         <AccordionSummary expandIcon={<ExpandMore />}>
           <Box display="flex" alignItems="center" gap={1}>
             <MenuBook />

@@ -274,7 +274,7 @@ function ProjectsListPage() {
    }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 8 }}>
+    <Container data-block="projects-list-container" maxWidth="lg" sx={{ mt: 8 }}>
       {viewingUserId && (
         <Alert 
           severity="info" 
@@ -295,13 +295,14 @@ function ProjectsListPage() {
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <Box data-block="projects-header" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 3 }}>
           <Typography variant="h4">
             {viewingUserId ? `${t('admin.userProjects')} #${viewingUserId}` : t('projects.title')}
           </Typography>
           {!viewingUserId && (
             <Button
+              data-block="new-analysis-button"
               variant="contained"
               startIcon={<Add />}
               onClick={() => navigate('/')}
@@ -317,95 +318,95 @@ function ProjectsListPage() {
         </Alert>
       )}
 
-       <TableContainer component={Paper}>
-         <Table>
-           <TableHead>
-             <TableRow>
-               <TableCell>
-                 <TableSortLabel
-                   active={sortBy === 'domain'}
-                   direction={sortBy === 'domain' ? sortOrder : 'asc'}
-                   onClick={() => handleRequestSort('domain')}
-                 >
-                   {t('projects.domain')}
-                 </TableSortLabel>
-               </TableCell>
-               <TableCell>
-                 <TableSortLabel
-                   active={sortBy === 'status'}
-                   direction={sortBy === 'status' ? sortOrder : 'asc'}
-                   onClick={() => handleRequestSort('status')}
-                 >
-                   {t('projects.status')}
-                 </TableSortLabel>
-               </TableCell>
-               <TableCell align="right">
-                 <TableSortLabel
-                   active={sortBy === 'created_at'}
-                   direction={sortBy === 'created_at' ? sortOrder : 'asc'}
-                   onClick={() => handleRequestSort('created_at')}
-                 >
-                   {t('projects.created')}
-                 </TableSortLabel>
-               </TableCell>
-               <TableCell align="right">{t('projects.pages')}</TableCell>
-               <TableCell align="right">{t('projects.foreignWords')}</TableCell>
-               <TableCell align="center">{t('projects.actions')}</TableCell>
-             </TableRow>
-           </TableHead>
-           <TableBody>
-             {projects.map((project) => (
-               <TableRow
-                 key={project.id}
-                 hover
-                 sx={{ cursor: 'pointer' }}
-                 onClick={() => navigate(`/project/${project.id}`)}
-               >
-                 <TableCell>{project.domain}</TableCell>
-                 <TableCell>
-                   <Chip
-                     label={getStatusLabel(project.status)}
-                     size="small"
-                     color={STATUS_COLORS[project.status] || 'default'}
-                   />
-                 </TableCell>
-                 <TableCell align="right">
-                   {new Date(project.created_at).toLocaleDateString()}
-                 </TableCell>
-                 <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
-                 <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
-                 <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                   <IconButton
-                     size="small"
-                     onClick={() => navigate(`/project/${project.id}`)}
-                     title={t('projects.view')}
-                   >
-                     <Visibility fontSize="small" />
-                   </IconButton>
-                   <IconButton
-                     size="small"
-                     onClick={() => handleDelete(project.id)}
-                     title={t('projects.delete')}
-                     color="error"
-                   >
-                     <Delete fontSize="small" />
-                   </IconButton>
-                 </TableCell>
-               </TableRow>
-             ))}
-             {projects.length === 0 && (
-               <TableRow>
-                 <TableCell colSpan={6} align="center">
-                   {t('projects.noProjects')}
-                 </TableCell>
-               </TableRow>
-             )}
-           </TableBody>
-         </Table>
-       </TableContainer>
-       </Box>
-     </Container>
-   );
+        <TableContainer data-block="projects-table" component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'domain'}
+                    direction={sortBy === 'domain' ? sortOrder : 'asc'}
+                    onClick={() => handleRequestSort('domain')}
+                  >
+                    {t('projects.domain')}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'status'}
+                    direction={sortBy === 'status' ? sortOrder : 'asc'}
+                    onClick={() => handleRequestSort('status')}
+                  >
+                    {t('projects.status')}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={sortBy === 'created_at'}
+                    direction={sortBy === 'created_at' ? sortOrder : 'asc'}
+                    onClick={() => handleRequestSort('created_at')}
+                  >
+                    {t('projects.created')}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">{t('projects.pages')}</TableCell>
+                <TableCell align="right">{t('projects.foreignWords')}</TableCell>
+                <TableCell align="center">{t('projects.actions')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {projects.map((project) => (
+                <TableRow
+                  key={project.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/project/${project.id}`)}
+                >
+                  <TableCell>{project.domain}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getStatusLabel(project.status)}
+                      size="small"
+                      color={STATUS_COLORS[project.status] || 'default'}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell align="right">{project.stats?.total_pages || 0}</TableCell>
+                  <TableCell align="right">{project.stats?.foreign_words_count || 0}</TableCell>
+                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/project/${project.id}`)}
+                      title={t('projects.view')}
+                    >
+                      <Visibility fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(project.id)}
+                      title={t('projects.delete')}
+                      color="error"
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {projects.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    {t('projects.noProjects')}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        </Box>
+      </Container>
+    );
 }
 
 export default ProjectsListPage;

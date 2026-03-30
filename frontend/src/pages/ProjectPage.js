@@ -348,8 +348,8 @@ function ProjectPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 8 }}>
-      <Box sx={{ mb: 3 }}>
+    <Container data-block="project-container" maxWidth="lg" sx={{ mt: 8 }}>
+      <Box data-block="project-header" sx={{ mb: 3 }}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate('/projects')} sx={{ mb: 2 }}>
           {t('project.backToProjects')}
         </Button>
@@ -368,9 +368,9 @@ function ProjectPage() {
       </Box>
 
       {stats && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid data-block="project-stats" container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
+            <Card data-block="stat-card-total-pages">
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.totalPages')}
@@ -380,7 +380,7 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
+            <Card data-block="stat-card-foreign-words">
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.foreignWords')}
@@ -390,7 +390,7 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
+            <Card data-block="stat-card-unique-foreign">
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.uniqueForeign')}
@@ -400,7 +400,7 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
+            <Card data-block="stat-card-foreign-percent">
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.foreignPercent')}
@@ -412,10 +412,11 @@ function ProjectPage() {
         </Grid>
       )}
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box data-block="project-actions" display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5">{t('project.pages')}</Typography>
-        <Box display="flex" gap={1}>
+        <Box data-block="action-buttons" display="flex" gap={1}>
           <Button
+            data-block="start-download-button"
             variant="contained"
             startIcon={<PlayArrow />}
             onClick={handleStart}
@@ -424,6 +425,7 @@ function ProjectPage() {
             {t('project.startDownload')}
           </Button>
           <Button
+            data-block="stop-button"
             variant="outlined"
             startIcon={<Stop />}
             onClick={handleStop}
@@ -432,6 +434,7 @@ function ProjectPage() {
             {t('project.stop')}
           </Button>
           <Button
+            data-block="clear-pages-button"
             variant="outlined"
             startIcon={<Delete />}
             onClick={() => setClearDialogOpen(true)}
@@ -443,7 +446,7 @@ function ProjectPage() {
         </Box>
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer data-block="pages-table" component={Paper}>
         <Table>
           <TableHead>
             <TableRow>

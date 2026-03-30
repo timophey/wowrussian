@@ -116,8 +116,8 @@ function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 8 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+      <Container data-block="admin-login-container" maxWidth="sm" sx={{ mt: 8 }}>
+        <Paper data-block="admin-login-form" elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" gutterBottom>
             {t('admin.adminPanel')}
           </Typography>
@@ -126,6 +126,7 @@ function AdminPage() {
           </Typography>
           <form onSubmit={handleLogin}>
             <TextField
+              data-block="admin-key-input"
               fullWidth
               label={t('admin.adminKey')}
               variant="outlined"
@@ -141,6 +142,7 @@ function AdminPage() {
               </Alert>
             )}
             <Button
+              data-block="login-button"
               type="submit"
               variant="contained"
               fullWidth
@@ -155,12 +157,13 @@ function AdminPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 8 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+    <Container data-block="admin-panel-container" maxWidth="lg" sx={{ mt: 8 }}>
+      <Box data-block="admin-panel-header" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 3 }}>
           <Typography variant="h4">{t('admin.adminPanel')}</Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Button
+              data-block="create-user-button"
               variant="outlined"
               startIcon={<Add />}
               onClick={() => setCreateDialogOpen(true)}
@@ -168,6 +171,7 @@ function AdminPage() {
               {t('admin.createUser')}
             </Button>
             <Button
+              data-block="back-to-projects-button"
               variant="text"
               startIcon={<ArrowBack />}
               onClick={() => navigate('/projects')}
@@ -175,6 +179,7 @@ function AdminPage() {
               {t('admin.backToProjects')}
             </Button>
             <Button
+              data-block="logout-button"
               variant="text"
               color="error"
               onClick={handleLogout}
@@ -195,7 +200,7 @@ function AdminPage() {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer data-block="users-table" component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -212,23 +217,23 @@ function AdminPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                    <TableCell align="right">
-                     <IconButton
-                       size="small"
-                       onClick={() => navigate(`/projects?user_id=${user.id}`)}
-                       title={t('admin.viewUserProjects')}
-                     >
-                       <Visibility fontSize="small" />
-                     </IconButton>
-                     <IconButton
-                       size="small"
-                       onClick={() => handleDeleteUser(user.id)}
-                       color="error"
-                       disabled={user.id === 1}
-                       title={user.id === 1 ? t('admin.cannotDeletePrimary') : t('admin.deleteUser')}
-                     >
-                       <Delete fontSize="small" />
-                     </IconButton>
-                   </TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => navigate(`/projects?user_id=${user.id}`)}
+                        title={t('admin.viewUserProjects')}
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteUser(user.id)}
+                        color="error"
+                        disabled={user.id === 1}
+                        title={user.id === 1 ? t('admin.cannotDeletePrimary') : t('admin.deleteUser')}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                 </TableRow>
               ))}
               {users.length === 0 && (
@@ -243,46 +248,46 @@ function AdminPage() {
         </TableContainer>
        )}
 
-       </Box>
+        </Box>
 
-       {/* Create User Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
-        <DialogTitle>{t('admin.createNewUser')}</DialogTitle>
-        <form onSubmit={handleCreateUser}>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label={t('admin.email')}
-              type="email"
-              fullWidth
-              variant="outlined"
-              value={newUserEmail}
-              onChange={(e) => setNewUserEmail(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              label={t('admin.password')}
-              type="password"
-              fullWidth
-              variant="outlined"
-              value={newUserPassword}
-              onChange={(e) => setNewUserPassword(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>
-              {t('dialogs.cancel')}
-            </Button>
-            <Button type="submit" variant="contained" disabled={creating}>
-              {creating ? <CircularProgress size={20} /> : t('admin.create')}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Container>
-  );
+        {/* Create User Dialog */}
+       <Dialog data-block="create-user-dialog" open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
+         <DialogTitle>{t('admin.createNewUser')}</DialogTitle>
+         <form onSubmit={handleCreateUser}>
+           <DialogContent>
+             <TextField
+               autoFocus
+               margin="dense"
+               label={t('admin.email')}
+               type="email"
+               fullWidth
+               variant="outlined"
+               value={newUserEmail}
+               onChange={(e) => setNewUserEmail(e.target.value)}
+               sx={{ mb: 2 }}
+             />
+             <TextField
+               margin="dense"
+               label={t('admin.password')}
+               type="password"
+               fullWidth
+               variant="outlined"
+               value={newUserPassword}
+               onChange={(e) => setNewUserPassword(e.target.value)}
+             />
+           </DialogContent>
+           <DialogActions>
+             <Button onClick={() => setCreateDialogOpen(false)}>
+               {t('dialogs.cancel')}
+             </Button>
+             <Button type="submit" variant="contained" disabled={creating}>
+               {creating ? <CircularProgress size={20} /> : t('admin.create')}
+             </Button>
+           </DialogActions>
+         </form>
+       </Dialog>
+     </Container>
+   );
 }
 
 export default AdminPage;

@@ -71,6 +71,7 @@ function Header() {
 
   return (
     <Box
+      data-block="header"
       sx={{
         position: 'fixed',
         top: 16,
@@ -196,7 +197,7 @@ function App() {
   return (
     <AuthProvider>
       <Header />
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container data-block="main-container" maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/projects" element={<ProjectsListPage />} />

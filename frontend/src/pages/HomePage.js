@@ -100,8 +100,8 @@ function HomePage() {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <Container data-block="home-container" maxWidth="md">
+      <Box data-block="home-content" sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h3" component="h1" gutterBottom>
           {t('home.title')}
         </Typography>
@@ -109,7 +109,7 @@ function HomePage() {
           {t('home.subtitle')}
         </Typography>
 
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+        <Paper data-block="url-form" elevation={3} sx={{ p: 4, width: '100%' }}>
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
@@ -130,6 +130,7 @@ function HomePage() {
             )}
 
             <Button
+              data-block="analyze-button"
               type="submit"
               variant="contained"
               size="large"
@@ -142,7 +143,7 @@ function HomePage() {
           </form>
         </Paper>
 
-        <Box sx={{ mt: 4, width: '100%' }}>
+        <Box data-block="home-description" sx={{ mt: 4, width: '100%' }}>
           <Typography variant="body2" color="text.secondary" align="center">
             {t('home.description')}
           </Typography>
