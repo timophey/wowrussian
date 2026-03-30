@@ -14,7 +14,9 @@ services:
 
   # 168fz Checker Service (for enhanced foreign word detection)
   fz168:
-    image: timophey/168fz:latest
+    build:
+      context: ./168fz
+      dockerfile: Dockerfile
     container_name: wowrussian_fz168
     ports:
       - "8169:8000"
