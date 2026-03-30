@@ -21,7 +21,10 @@ services:
     ports:
       - "8169:8000"
     volumes:
-      - ./dictionaries:/app/dictionaries
+      - ./168fz/dictionaries/data:/app/dictionaries/data
+      - ./168fz/dictionaries/user_data:/app/dictionaries/user_data
+      - ./168fz/sync/cache:/app/sync/cache
+      - ./168fz/config:/app/config
     environment:
       - ADMIN_KEY=${FZ168_ADMIN_KEY:-}
       - DEBUG=false
@@ -100,7 +103,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
-      - ./dictionaries:/app/dictionaries
     depends_on:
       - redis
       - postgres
@@ -133,7 +135,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
-      - ./dictionaries:/app/dictionaries
     depends_on:
       - redis
       - backend
