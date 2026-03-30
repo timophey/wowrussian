@@ -213,6 +213,14 @@ git_pull() {
     # Pull latest changes
     if git pull origin "$current_branch"; then
         log_success "Git pull successful"
+        
+        # Update submodules
+        log_info "Updating git submodules..."
+        if git submodule update --init --recursive; then
+            log_success "Submodules updated"
+        else
+            log_warning "Failed to update submodules"
+        fi
     else
         log_error "Git pull failed"
         exit 1

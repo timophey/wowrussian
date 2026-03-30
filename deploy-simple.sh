@@ -54,6 +54,12 @@ fi
 echo "Pulling latest code..."
 if [[ -d ".git" ]]; then
     git pull || echo "WARNING: Git pull failed"
+    
+    # Update submodules if .gitmodules exists
+    if [[ -f ".gitmodules" ]]; then
+        echo "Updating git submodules..."
+        git submodule update --init --recursive || echo "WARNING: Failed to update submodules"
+    fi
 else
     echo "WARNING: Not a git repository, skipping git pull"
 fi
