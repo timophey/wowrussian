@@ -13,14 +13,25 @@ else
     DOCKER_COMPOSE="docker-compose"
 fi
 
-# Configuration
+# Load config if exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/deploy-config.sh"
+
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+fi
+
+# Configuration (with defaults if not set in config file)
 APP_NAME="WowRussian"
-DEPLOY_DIR="/home/cloudpanel/domains/yourdomain.com/wowrussian"
+: ${DEPLOY_DIR:="/home/cloudpanel/domains/yourdomain.com/wowrussian"}
+: ${ENV_FILE:=".env"}
+: ${BACKUP_DIR:="/backup/wowrussian"}
+: ${RETENTION_DAYS:=7}  # Keep logs and backups for this many days
+: ${FRONTEND_PORT:=3000}
+
+# Derived paths (use DEPLOY_DIR from config or default)
 LOG_DIR="$DEPLOY_DIR/logs"
 LOG_FILE="$LOG_DIR/wowrussian-deploy-$(date +%Y%m%d-%H%M%S).log"
-ENV_FILE=".env"
-BACKUP_DIR="/backup/wowrussian"
-RETENTION_DAYS=7  # Keep logs and backups for this many days
 
 # Colors for output
 RED='\033[0;31m'
