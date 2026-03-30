@@ -33,6 +33,9 @@ APP_NAME="WowRussian"
 LOG_DIR="$DEPLOY_DIR/logs"
 LOG_FILE="$LOG_DIR/wowrussian-deploy-$(date +%Y%m%d-%H%M%S).log"
 
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
