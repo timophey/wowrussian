@@ -78,6 +78,17 @@
       "low": "Low"
     }
   },
+ "violationsDialog": {
+   "title": "Violations Details",
+   "description": "Pages with violations based on 168-FZ analysis",
+   "pageUrl": "Page URL",
+   "riskLevel": "Risk Level",
+   "violations": "Violations",
+   "actions": "Actions",
+   "viewFullAnalysis": "View Full Analysis",
+   "noViolations": "No violations found",
+   "noData": "No pages with violation data available"
+ },
   "page": {
     "backToProject": "Back to Project",
     "pageAnalysis": "Page Analysis",

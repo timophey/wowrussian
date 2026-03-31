@@ -66,6 +66,7 @@ function ProjectPage() {
   const [pageDetailOpen, setPageDetailOpen] = useState(false);
   const [pageDetail, setPageDetail] = useState(null);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [violationsDialogOpen, setViolationsDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
 
@@ -308,6 +309,36 @@ function ProjectPage() {
     setSortOrder(newSortOrder);
   };
 
+  const getPagesWithViolations = () => {
+    if (!pages) return [];
+    return pages
+      .filter(page => {
+        const summary = page.fz168_summary;
+        return summary && summary.violation_count && summary.violation_count > 0;
+      })
+      .map(page => ({
+        id: page.id,
+        url: page.url,
+        risk_level: page.fz168_summary?.risk_level || 'low',
+        violation_count: page.fz168_summary?.violation_count || 0,
+        status: page.status
+      }))
+      .sort((a, b) => b.violation_count - a.violation_count); // Sort by violations descending
+  };
+
+  const handleViewPageFromViolations = async (page) => {
+    try {
+      const guestToken = getGuestToken();
+      const res = await pageApi.get(page.project_id || id, page.id, guestToken);
+      setPageDetail(res.data);
+      setSelectedPage(page);
+      setPageDetailOpen(true);
+      setViolationsDialogOpen(false);
+    } catch (err) {
+      setError(t('errors.failedToLoadPageDetails'));
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -372,7 +403,17 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-violations" sx={{ height: '100%' }}>
+            <Card
+              data-block="stat-card-violations"
+              sx={{
+                height: '100%',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
+              }}
+              onClick={() => setViolationsDialogOpen(true)}
+            >
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.violations')}
@@ -552,6 +593,82 @@ function ProjectPage() {
           <Button onClick={() => setClearDialogOpen(false)}>{t('dialogs.cancel')}</Button>
           <Button onClick={handleClear} color="error" variant="contained">
             {t('dialogs.clearAll')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Violations Details Dialog */}
+      <Dialog open={violationsDialogOpen} onClose={() => setViolationsDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{t('violationsDialog.title')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('violationsDialog.description')}
+          </Typography>
+          
+          {pages.length === 0 ? (
+            <Alert severity="info">{t('violationsDialog.noData')}</Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('violationsDialog.pageUrl')}</TableCell>
+                    <TableCell align="center">{t('violationsDialog.riskLevel')}</TableCell>
+                    <TableCell align="right">{t('violationsDialog.violations')}</TableCell>
+                    <TableCell align="center">{t('violationsDialog.actions')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {getPagesWithViolations().length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                        <Typography color="text.secondary">
+                          {t('violationsDialog.noViolations')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    getPagesWithViolations().map((page) => (
+                      <TableRow key={page.id} hover>
+                        <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {page.url}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={t(`project.riskLevels.${page.risk_level}`)}
+                            size="small"
+                            color={
+                              page.risk_level === 'high' ? 'error' :
+                              page.risk_level === 'medium' ? 'warning' : 'success'
+                            }
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography color="error" fontWeight="bold">
+                            {page.violation_count}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleViewPageFromViolations(page)}
+                            title={t('violationsDialog.viewFullAnalysis')}
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViolationsDialogOpen(false)}>
+            {t('dialogs.close')}
           </Button>
         </DialogActions>
       </Dialog>

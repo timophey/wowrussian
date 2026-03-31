@@ -184,9 +184,8 @@ async def get_page(
             {"word": rw.word, "count": rw.count, "source": rw.source}
             for rw in russian_words
         ],
-        # Include 168fz metadata if available
+        # Include additional 168fz metadata if available (fz168_summary already in page_data from PageResponse)
         fz168_statistics=page.fz168_statistics,
-        fz168_summary=page.fz168_summary,
         fz168_checks=page.fz168_checks,
         fz168_dictionaries=page.fz168_dictionaries,
         fz168_raw_response=page.fz168_raw_response

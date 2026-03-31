@@ -148,7 +148,18 @@
     "close": "Закрыть",
     "htmlContent": "HTML Контент"
   },
-    "errors": {
+ "violationsDialog": {
+   "title": "Детали нарушений",
+   "description": "Страницы с нарушениями по анализу 168-ФЗ",
+   "pageUrl": "URL страницы",
+   "riskLevel": "Уровень риска",
+   "violations": "Нарушения",
+   "actions": "Действия",
+   "viewFullAnalysis": "Просмотреть полный анализ",
+   "noViolations": "Нарушений не обнаружено",
+   "noData": "Нет страниц с данными о нарушениях"
+ },
+   "errors": {
     "failedToLoad": "Не удалось загрузить",
     "failedToLoadProjects": "Не удалось загрузить проекты",
     "failedToDeleteProject": "Не удалось удалить проект",

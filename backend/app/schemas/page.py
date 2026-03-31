@@ -29,6 +29,8 @@ class PageResponse(BaseModel):
     foreign_words_count: int
     created_at: datetime
     updated_at: datetime
+    # 168fz metadata (optional, may be null for pages not analyzed with 168-fz)
+    fz168_summary: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
