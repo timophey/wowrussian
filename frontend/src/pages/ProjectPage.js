@@ -224,7 +224,14 @@ function ProjectPage() {
       setProject(prev => prev ? { ...prev, status: 'crawling' } : null);
       // Clear pages list as they will be re-crawled
       setPages([]);
-      setStats({ total_pages: 0, foreign_words_count: 0, unique_foreign_words: 0, foreign_percentage: 0 });
+      setStats({
+        total_pages: 0,
+        total_foreign_words: 0,
+        unique_foreign_words: 0,
+        foreign_percentage: 0,
+        risk_level_distribution: { high: 0, medium: 0, low: 0 },
+        total_violations: 0
+      });
     } catch (err) {
       setError(t('errors.failedToStartProject') + ': ' + (err.response?.data?.detail || err.message));
     }
@@ -236,7 +243,14 @@ function ProjectPage() {
       await projectApi.clearPages(id, guestToken);
       // Optimistically clear pages and reset stats
       setPages([]);
-      setStats({ total_pages: 0, foreign_words_count: 0, unique_foreign_words: 0, foreign_percentage: 0 });
+      setStats({
+        total_pages: 0,
+        total_foreign_words: 0,
+        unique_foreign_words: 0,
+        foreign_percentage: 0,
+        risk_level_distribution: { high: 0, medium: 0, low: 0 },
+        total_violations: 0
+      });
       setProject(prev => prev ? { ...prev, status: 'pending' } : null);
       setClearDialogOpen(false);
     } catch (err) {
@@ -335,7 +349,7 @@ function ProjectPage() {
       {stats && (
         <Grid data-block="project-stats" container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-total-pages">
+            <Card data-block="stat-card-total-pages" sx={{ height: '100%' }}>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.totalPages')}
@@ -345,32 +359,48 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-foreign-words">
+            <Card data-block="stat-card-foreign-words-combined" sx={{ height: '100%' }}>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.foreignWords')}
                 </Typography>
                 <Typography variant="h4">{stats.total_foreign_words}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('project.unique')}: {stats.unique_foreign_words}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-unique-foreign">
+            <Card data-block="stat-card-violations" sx={{ height: '100%' }}>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('project.uniqueForeign')}
+                  {t('project.violations')}
                 </Typography>
-                <Typography variant="h4">{stats.unique_foreign_words}</Typography>
+                <Typography variant="h4" color="error">{stats.total_violations || 0}</Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-foreign-percent">
+            <Card data-block="stat-card-risk-level" sx={{ height: '100%' }}>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('project.foreignPercent')}
+                  {t('project.riskLevel')}
                 </Typography>
-                <Typography variant="h4">{stats.foreign_percentage.toFixed(1)}%</Typography>
+                <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+                  {stats.risk_level_distribution && Object.entries(stats.risk_level_distribution).map(([level, count]) => (
+                    <Chip
+                      key={level}
+                      label={`${t(`project.riskLevels.${level}`)}: ${count}`}
+                      size="small"
+                      color={
+                        level === 'high' ? 'error' :
+                        level === 'medium' ? 'warning' : 'success'
+                      }
+                      variant={count > 0 ? 'filled' : 'outlined'}
+                    />
+                  ))}
+                </Box>
               </CardContent>
             </Card>
           </Grid>

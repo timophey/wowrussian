@@ -62,14 +62,21 @@
     "status": "Статус",
     "totalPages": "Всего Страниц",
     "foreignWords": "Иностранных Слов",
-    "uniqueForeign": "Уникальных Иностранных",
+    "unique": "Уникальных",
     "foreignPercent": "Иностранных %",
     "startDownload": "Начать Сканирование",
     "stop": "Остановить",
     "clearPages": "Очистить Страницы",
     "url": "URL",
     "totalWords": "Всего Слов",
-    "actions": "Действия"
+    "actions": "Действия",
+    "violations": "Нарушений",
+    "riskLevel": "Уровень риска",
+    "riskLevels": {
+      "high": "Высокий",
+      "medium": "Средний",
+      "low": "Низкий"
+    }
   },
   "page": {
     "backToProject": "Назад к Проекту",

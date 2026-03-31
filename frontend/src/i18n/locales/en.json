@@ -62,14 +62,21 @@
     "status": "Status",
     "totalPages": "Total Pages",
     "foreignWords": "Foreign Words",
-    "uniqueForeign": "Unique Foreign",
+    "unique": "Unique",
     "foreignPercent": "Foreign %",
     "startDownload": "Start Download",
     "stop": "Stop",
     "clearPages": "Clear Pages",
     "url": "URL",
     "totalWords": "Total Words",
-    "actions": "Actions"
+    "actions": "Actions",
+    "violations": "Violations",
+    "riskLevel": "Risk Level",
+    "riskLevels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
   },
   "page": {
     "backToProject": "Back to Project",
