@@ -15,26 +15,17 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Tabs,
-  Tab,
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
   Grid,
   Card,
   CardContent,
 } from '@mui/material';
-import { ArrowBack, Visibility, Code, ExpandMore, Assessment, MenuBook, CheckCircle, Warning } from '@mui/icons-material';
+import { ArrowBack, Visibility, Code } from '@mui/icons-material';
 import { pageApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import AnalysisResults from '../components/AnalysisResults';
 
 function PageDetailPage() {
   const { t } = useTranslation();
@@ -142,6 +133,44 @@ function PageDetailPage() {
         return status;
     }
   };
+
+  // Prepare 168fz data for AnalysisResults component
+  const prepareFz168Results = (pageData) => {
+    const {
+      fz168_statistics,
+      fz168_summary,
+      fz168_checks,
+      fz168_dictionaries,
+      fz168_raw_response
+    } = pageData;
+
+    if (!fz168_raw_response) {
+      return null;
+    }
+
+    // The 168fz response structure: {success: true, data: {all_words: [...], ...}}
+    // Handle both direct data and nested data
+    const responseData = fz168_raw_response.data || fz168_raw_response;
+    const allWords = responseData.all_words || [];
+
+    // If no all_words, we can't display the component properly
+    if (!allWords || allWords.length === 0) {
+      return null;
+    }
+
+    return {
+      statistics: fz168_statistics || {},
+      summary: fz168_summary || {},
+      checks: fz168_checks || {},
+      all_words: allWords,
+      dictionaries_used: fz168_dictionaries || [],
+      source_info: {
+        type: t('single.crawlerAnalysisSource')
+      }
+    };
+  };
+
+  const fz168Results = prepareFz168Results(page);
 
   if (loading) {
     return (
@@ -298,130 +327,12 @@ function PageDetailPage() {
       <Typography color="text.secondary">{t('page.noRussianWords')}</Typography>
     )}
 
-    {/* 168-FZ Metadata Section */}
-    {(page.fz168_statistics || page.fz168_summary || page.fz168_checks || page.fz168_dictionaries) ? (
-      <Box data-block="fz168-section" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          {t('fz168.title')}
-        </Typography>
-
-        {/* Summary Panel */}
-        <Accordion data-block="fz168-summary-accordion" defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Assessment />
-              <Typography>{t('fz168.summary')}</Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            {page.fz168_summary && Object.keys(page.fz168_summary).length > 0 ? (
-              <Grid container spacing={2}>
-                {Object.entries(page.fz168_summary).map(([key, value]) => (
-                  <Grid item xs={6} sm={3} key={key}>
-                    <Card data-block={`fz168-summary-card-${key}`} variant="outlined">
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          {t(`fz168.${key}`, { defaultValue: key.replace(/_/g, ' ') })}
-                        </Typography>
-                        <Typography variant="h6">{value}</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            ) : (
-              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Checks Panel */}
-        <Accordion data-block="fz168-checks-accordion">
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <CheckCircle />
-              <Typography>{t('fz168.checks')}</Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            {page.fz168_checks && Object.keys(page.fz168_checks).length > 0 ? (
-              <List>
-                {Object.entries(page.fz168_checks).map(([key, check]) => (
-                  <React.Fragment key={key}>
-                    <ListItem>
-                      <ListItemText
-                        primary={key}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="textSecondary">
-                              {t('fz168.dictionary')}: {check.dictionary || '-'}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {t('fz168.explanation')}: {check.explanation || '-'}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {t('fz168.lawArticle')}: {check.law_article || '-'}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    <Divider />
-                  </React.Fragment>
-                ))}
-              </List>
-            ) : (
-              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Statistics Panel */}
-        <Accordion data-block="fz168-statistics-accordion">
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <MenuBook />
-              <Typography>{t('fz168.statistics')}</Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            {page.fz168_statistics ? (
-              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                {JSON.stringify(page.fz168_statistics, null, 2)}
-              </pre>
-            ) : (
-              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Dictionaries Panel */}
-        <Accordion data-block="fz168-dictionaries-accordion">
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Warning />
-              <Typography>{t('fz168.dictionaries')}</Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            {page.fz168_dictionaries && page.fz168_dictionaries.length > 0 ? (
-              <List>
-                {page.fz168_dictionaries.map((dict, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemText
-                      primary={dict.name || dict.id}
-                      secondary={`${t('fz168.dictionary')}: ${dict.type || 'unknown'}`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography color="text.secondary">{t('fz168.noMetadata')}</Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
+    {/* 168-FZ Analysis Results using AnalysisResults Component */}
+    {fz168Results && (
+      <Box data-block="fz168-analysis-results" sx={{ mt: 4, mb: 4 }}>
+        <AnalysisResults results={fz168Results} />
       </Box>
-    ) : null}
+    )}
 
     {/* HTML Dialog */}
       <Dialog data-block="html-dialog" open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
