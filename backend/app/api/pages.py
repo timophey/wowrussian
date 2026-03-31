@@ -188,7 +188,8 @@ async def get_page(
         fz168_statistics=page.fz168_statistics,
         fz168_summary=page.fz168_summary,
         fz168_checks=page.fz168_checks,
-        fz168_dictionaries=page.fz168_dictionaries
+        fz168_dictionaries=page.fz168_dictionaries,
+        fz168_raw_response=page.fz168_raw_response
     )
     
     # Load HTML and text content from files

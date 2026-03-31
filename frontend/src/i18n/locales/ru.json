@@ -94,7 +94,8 @@
     "truncated": "... (обрезано)",
     "totalWords": "Всего Слов",
     "foreignWords": "Иностранных Слов",
-    "foreignPercent": "Иностранных %"
+    "foreignPercent": "Иностранных %",
+    "analysisNotAvailable": "Анализ 168-ФЗ недоступен для этой страницы. Возможно, страница была проанализирована с использованием локального анализатора."
   },
   "classification": {
     "anglicism": "Англицизм",
@@ -216,6 +217,7 @@
       "back": "Назад",
       "downloadJson": "Скачать JSON",
       "sourceInfo": "Источник",
+      "crawlerAnalysisSource": "Анализ Сканером (Проект)",
       "totalWords": "Всего слов",
       "uniqueWords": "Уникальных",
       "riskLevel": "Уровень риска",

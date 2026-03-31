@@ -94,7 +94,8 @@
     "truncated": "... (truncated)",
     "totalWords": "Total Words",
     "foreignWords": "Foreign Words",
-    "foreignPercent": "Foreign %"
+    "foreignPercent": "Foreign %",
+    "analysisNotAvailable": "168-FZ analysis is not available for this page. The page may have been analyzed using the local analyzer."
   },
   "classification": {
     "anglicism": "Anglicism",
@@ -216,6 +217,7 @@
        "back": "Back",
        "downloadJson": "Download JSON",
        "sourceInfo": "Source",
+       "crawlerAnalysisSource": "Crawler Analysis (Project)",
        "totalWords": "Total Words",
        "uniqueWords": "Unique",
        "riskLevel": "Risk Level",

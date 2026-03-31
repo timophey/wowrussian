@@ -44,6 +44,7 @@ class PageDetail(PageResponse):
     fz168_summary: Optional[Dict[str, Any]] = None  # summary from 168fz
     fz168_checks: Optional[Dict[str, Any]] = None  # checks (foreign_words, prohibited_words, etc.)
     fz168_dictionaries: Optional[List[Dict[str, Any]]] = None  # list of dictionaries used
+    fz168_raw_response: Optional[Dict[str, Any]] = None  # complete raw response from 168fz API
 
 # Alias for compatibility with __init__.py imports
 Page = PageResponse

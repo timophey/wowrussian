@@ -30,6 +30,7 @@ import { Visibility, Stop, ArrowBack, PlayArrow, Delete } from '@mui/icons-mater
 import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
+import AnalysisResults from '../components/AnalysisResults';
 
 const STATUS_COLORS = {
   pending: 'default',
@@ -49,43 +50,6 @@ function ProjectPage() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
 
-  // Language code to name mapping (from translations)
-  const getLanguageName = (code) => {
-    if (!code) return t('page.unknown');
-    return t(`language.${code.toLowerCase()}`, { defaultValue: code.toUpperCase() });
-  };
-
-  // Get classification based on language
-  const getClassification = (languageGuess) => {
-    if (!languageGuess) return t('classification.foreign');
-    const lang = languageGuess.toLowerCase();
-    if (lang === 'en') return t('classification.anglicism');
-    if (lang === 'fr') return t('classification.gallicism');
-    if (lang === 'de') return t('classification.germanism');
-    if (lang === 'it') return t('classification.italianism');
-    if (lang === 'es') return t('classification.hispanism');
-    if (lang === 'ru') return t('classification.russian');
-    return t('classification.foreign');
-  };
-
-  // Get classification color
-  const getClassificationColor = (languageGuess) => {
-    const classification = getClassification(languageGuess);
-    switch (classification) {
-      case t('classification.anglicism'):
-        return 'error';
-      case t('classification.gallicism'):
-        return 'secondary';
-      case t('classification.germanism'):
-        return 'warning';
-      case t('classification.italianism'):
-        return 'info';
-      case t('classification.hispanism'):
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
   const navigate = useNavigate();
   
   // Helper to get guest session token when not authenticated
@@ -528,106 +492,12 @@ function ProjectPage() {
           <>
             <DialogTitle>{selectedPage?.url}</DialogTitle>
             <DialogContent>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {t('page.status')}: {getStatusLabel(pageDetail.status)}
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  {t('page.totalWords')}: {pageDetail.words_count}
-                </Typography>
-                <Typography variant="body2">
-                  {t('page.foreignWords')}: {pageDetail.foreign_words_count}
-                </Typography>
-              </Box>
-
-              {pageDetail.foreign_words && pageDetail.foreign_words.length > 0 && (
-                <>
-                  <Typography variant="h6" gutterBottom>
-                    {t('page.detectedForeignWords')}
-                  </Typography>
-                  <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('page.word')}</TableCell>
-                          <TableCell>{t('page.language')}</TableCell>
-                          <TableCell>{t('page.type')}</TableCell>
-                          <TableCell align="right">{t('page.count')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {pageDetail.foreign_words.map((fw, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{fw.word}</TableCell>
-                            <TableCell>{getLanguageName(fw.language_guess)}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={getClassification(fw.language_guess)}
-                                color={getClassificationColor(fw.language_guess)}
-                                size="small"
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell align="right">{fw.count}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </>
-              )}
-
-            {pageDetail.russian_words && pageDetail.russian_words.length > 0 && (
-              <>
-                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                  {t('page.russianWordsFound')}
-                </Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('page.word')}</TableCell>
-                        <TableCell>{t('page.dictionarySource')}</TableCell>
-                        <TableCell align="right">{t('page.count')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {pageDetail.russian_words
-                        .sort((a, b) => b.count - a.count)
-                        .map((rw, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{rw.word}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={rw.source === 'dictionary' ? t('page.mainDictionary') :
-                                       rw.source === 'fallback' ? t('page.fallbackDictionary') : t('page.unknown')}
-                                color={rw.source === 'dictionary' ? 'success' :
-                                       rw.source === 'fallback' ? 'warning' : 'default'}
-                                size="small"
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell align="right">{rw.count}</TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </>
-            )}
-
-            {pageDetail.text_content && (
-                <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                    {t('page.extractedText')}
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
-                    <Typography variant="body2" component="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                      {pageDetail.text_content.substring(0, 2000)}
-                      {pageDetail.text_content.length > 2000 && t('page.truncated')}
-                    </Typography>
-                  </Paper>
-                </>
+              {pageDetail.fz168_raw_response?.data ? (
+                <AnalysisResults results={pageDetail.fz168_raw_response.data} />
+              ) : (
+                <Alert severity="warning">
+                  {t('page.analysisNotAvailable')}
+                </Alert>
               )}
             </DialogContent>
             <DialogActions>
