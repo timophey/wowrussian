@@ -246,7 +246,8 @@ function ProjectPage() {
 
   const handleViewPage = async (page) => {
     try {
-      const res = await pageApi.get(page.project_id, page.id);
+      const guestToken = getGuestToken();
+      const res = await pageApi.get(page.project_id, page.id, guestToken);
       setPageDetail(res.data);
       setSelectedPage(page);
       setPageDetailOpen(true);
