@@ -1,13 +1,15 @@
-from typing import Annotated
+from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, HttpUrl, Field
 import re
 import logging
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+import io
 
 from app.core.database import get_db
 from app.services.fz168_client import FZ168Client
+from app.services.excel_exporter import ExcelExporter
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,24 @@ class SingleCheckRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "url": "https://example.com/article"
+            }
+        }
+
+
+class ExportRequest(BaseModel):
+    """Request model for XLSX export."""
+    analysis_data: dict = Field(..., description="Analysis results data (same structure as fz168 response)")
+    selected_statuses: Optional[List[str]] = Field(None, description="List of statuses to include. If empty, all statuses are included")
+    page_url: Optional[str] = Field(None, description="URL of the analyzed page")
+    language: Optional[str] = Field("ru", description="Language code for headers (ru or en)")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "analysis_data": {"statistics": {}, "summary": {}, "all_words": []},
+                "selected_statuses": ["prohibited", "foreign"],
+                "page_url": "https://example.com/article",
+                "language": "ru"
             }
         }
 
@@ -90,3 +110,59 @@ async def check_single(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Failed to analyze URL via 168fz service: {str(e)}"
         )
+
+
+@router.post("/export-xlsx")
+async def export_xlsx(
+    request: Request,
+    data: ExportRequest
+):
+    """
+    Export analysis results to XLSX format.
+    
+    Creates an Excel file with:
+    - Frozen header row: localized column names
+    - Data rows filtered by selected statuses
+    - Status cells styled with colors matching the UI
+    - Auto-filter for easy filtering
+    - Page URL in first column as hyperlink
+    
+    Args:
+        data: ExportRequest containing analysis data and filters
+        
+    Returns:
+        StreamingResponse with XLSX file
+    """
+    try:
+        analysis_data = data.analysis_data
+        page_url = data.page_url
+        language = data.language or "ru"
+        
+        # Use the ExcelExporter service
+        excel_bytes = ExcelExporter.export_analysis(
+            analysis_data=analysis_data,
+            selected_statuses=data.selected_statuses,
+            page_url=page_url,
+            language=language
+        )
+        
+        # Create filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"analysis_export_{timestamp}.xlsx"
+        
+        return StreamingResponse(
+            io.BytesIO(excel_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating XLSX export: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate XLSX export: {str(e)}"
+        )
+

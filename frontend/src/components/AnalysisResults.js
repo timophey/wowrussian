@@ -23,6 +23,13 @@ import {
   IconButton,
   InputAdornment,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
 } from '@mui/material';
 import {
   Assessment,
@@ -32,15 +39,18 @@ import {
   Visibility,
   Search,
   ExpandMore,
+  FileDownload,
 } from '@mui/icons-material';
 
 function AnalysisResults({ results, onDownload }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('word');
   const [filterWord, setFilterWord] = useState('');
   const [activeStatusFilter, setActiveStatusFilter] = useState(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [selectedExportStatuses, setSelectedExportStatuses] = useState([]);
 
   if (!results) return null;
 
@@ -64,6 +74,68 @@ function AnalysisResults({ results, onDownload }) {
     } else {
       setActiveStatusFilter(status);
     }
+  };
+
+  const handleExport = async () => {
+    try {
+      const currentLanguage = i18n.language || 'ru';
+      
+      const exportData = {
+        analysis_data: results,
+        selected_statuses: selectedExportStatuses,
+        page_url: sourceInfo?.url || undefined,
+        language: currentLanguage
+      };
+
+      console.log('Export data:', {
+        hasSourceInfo: !!sourceInfo,
+        sourceInfoUrl: sourceInfo?.url,
+        sourceInfo: sourceInfo,
+        analysisDataKeys: Object.keys(results),
+        hasAllWords: !!results.all_words,
+        allWordsCount: results.all_words?.length
+      });
+
+      const response = await fetch('/api/single/export-xlsx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exportData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Get the blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analysis_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setExportDialogOpen(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  };
+
+  const handleOpenExportDialog = () => {
+    // Initialize with all statuses selected
+    const allStatuses = Object.keys(
+      allWords.reduce((acc, w) => {
+        acc[w.status] = (acc[w.status] || 0) + 1;
+        return acc;
+      }, {})
+    );
+    setSelectedExportStatuses(allStatuses);
+    setExportDialogOpen(true);
   };
 
   const getRecommendationSortValue = (wordData) => {
@@ -208,7 +280,7 @@ function AnalysisResults({ results, onDownload }) {
           <Typography variant="subtitle1" gutterBottom>
             {t('single.statusSummary')}
           </Typography>
-          <Box display="flex" flexWrap="wrap" gap={2}>
+          <Box display="flex" flexWrap="wrap" gap={2} alignItems="center">
             {Object.entries(
               allWords.reduce((acc, w) => {
                 acc[w.status] = (acc[w.status] || 0) + 1;
@@ -227,6 +299,16 @@ function AnalysisResults({ results, onDownload }) {
                 />
               );
             })}
+            <Box sx={{ flexGrow: 1 }} />
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<FileDownload />}
+              onClick={handleOpenExportDialog}
+              data-block="export-xlsx-button"
+            >
+              XLSX
+            </Button>
           </Box>
         </Paper>
       )}
@@ -544,6 +626,57 @@ function AnalysisResults({ results, onDownload }) {
           )}
         </AccordionDetails>
       </Accordion>
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('single.exportDialogTitle', 'Экспорт в XLSX')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('single.exportDialogDescription', 'Выберите статусы слов для экспорта')}
+          </Typography>
+          <FormGroup>
+            {Object.entries(
+              allWords.reduce((acc, w) => {
+                acc[w.status] = (acc[w.status] || 0) + 1;
+                return acc;
+              }, {})
+            ).map(([status, count]) => {
+              const isChecked = selectedExportStatuses.includes(status);
+              return (
+                <FormControlLabel
+                  key={status}
+                  control={
+                    <Checkbox
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedExportStatuses([...selectedExportStatuses, status]);
+                        } else {
+                          setSelectedExportStatuses(selectedExportStatuses.filter(s => s !== status));
+                        }
+                      }}
+                      color="primary"
+                    />
+                  }
+                  label={`${getStatusBadge(status).props.label} (${count.toLocaleString()})`}
+                />
+              );
+            })}
+          </FormGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExportDialogOpen(false)}>
+            {t('dialogs.cancel')}
+          </Button>
+          <Button
+            onClick={handleExport}
+            variant="contained"
+            startIcon={<FileDownload />}
+          >
+            {t('single.exportButton', 'Экспорт')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

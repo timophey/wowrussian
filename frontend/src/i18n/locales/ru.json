@@ -256,6 +256,9 @@
       "noData": "Нет данных",
       "invalidUrl": "Invalid URL format. Please provide a valid URL starting with http:// or https://",
       "pleaseEnterUrl": "Пожалуйста, введите URL",
-      "analysisFailed": "Не удалось выполнить анализ"
+      "analysisFailed": "Не удалось выполнить анализ",
+      "exportDialogTitle": "Экспорт в XLSX",
+      "exportDialogDescription": "Выберите статусы слов для экспорта",
+      "exportButton": "Экспорт"
     }
   }
