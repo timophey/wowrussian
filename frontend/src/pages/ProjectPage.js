@@ -26,7 +26,7 @@ import {
   DialogActions,
   TableSortLabel,
 } from '@mui/material';
-import { Visibility, Stop, ArrowBack, PlayArrow, Delete } from '@mui/icons-material';
+import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,7 +46,7 @@ const STATUS_COLORS = {
 };
 
 function ProjectPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
 
@@ -67,6 +67,8 @@ function ProjectPage() {
   const [pageDetail, setPageDetail] = useState(null);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [violationsDialogOpen, setViolationsDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [pageDetailSource, setPageDetailSource] = useState(null); // 'pages' | 'violations' | null
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -257,6 +259,68 @@ function ProjectPage() {
       setClearDialogOpen(false);
     } catch (err) {
       setError(t('errors.failedToClearPages') + ': ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleExportProject = async () => {
+    setExportDialogOpen(true);
+  };
+
+  const executeExportProject = async () => {
+    setExportDialogOpen(false);
+    setExportLoading(true);
+    try {
+      const guestToken = getGuestToken();
+      const currentLanguage = i18n.language || 'ru';
+      
+      // Build URL with query parameters
+      let exportUrl = `/api/projects/${id}/export-xlsx?language=${encodeURIComponent(currentLanguage)}`;
+      if (guestToken) {
+        exportUrl += `&guest_session_token=${encodeURIComponent(guestToken)}`;
+      }
+      
+      // Get auth token if available
+      const token = localStorage.getItem('access_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      // Set up timeout (5 minutes)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min
+      
+      try {
+        // Request export from backend (GET request)
+        const response = await fetch(exportUrl, {
+          method: 'GET',
+          headers: headers,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Export failed with status ${response.status}`);
+      }
+      
+      // Download the file
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `project_export_${id}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Project export error:', error);
+      alert('Failed to export project data: ' + (error.message || error));
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -482,6 +546,15 @@ function ProjectPage() {
           >
             {t('project.clearPages')}
           </Button>
+          <Button
+            data-block="export-project-xlsx-button"
+            variant="outlined"
+            startIcon={<FileDownload />}
+            onClick={handleExportProject}
+            disabled={pages.length === 0}
+          >
+            {t('project.exportXLSX', 'Экспорт XLSX')}
+          </Button>
         </Box>
       </Box>
 
@@ -595,7 +668,7 @@ function ProjectPage() {
             <DialogTitle>{selectedPage?.url}</DialogTitle>
             <DialogContent>
               {pageDetail.fz168_raw_response?.data ? (
-                <AnalysisResults results={pageDetail.fz168_raw_response.data} />
+                <AnalysisResults results={pageDetail.fz168_raw_response.data} pageUrl={selectedPage?.url} />
               ) : (
                 <Alert severity="warning">
                   {t('page.analysisNotAvailable')}
@@ -714,6 +787,29 @@ function ProjectPage() {
         <DialogActions>
           <Button onClick={() => setViolationsDialogOpen(false)}>
             {t('dialogs.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Export Project Confirmation Dialog */}
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
+        <DialogTitle>{t('project.exportXLSX')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('project.exportConfirmMessage', 'Export all analysis results from all pages to an Excel file? This may take some time.')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExportDialogOpen(false)}>
+            {t('dialogs.cancel')}
+          </Button>
+          <Button
+            onClick={executeExportProject}
+            variant="contained"
+            color="primary"
+            disabled={exportLoading}
+          >
+            {exportLoading ? <CircularProgress size={24} /> : t('project.export')}
           </Button>
         </DialogActions>
       </Dialog>

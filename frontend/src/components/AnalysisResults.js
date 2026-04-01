@@ -42,7 +42,7 @@ import {
   FileDownload,
 } from '@mui/icons-material';
 
-function AnalysisResults({ results, onDownload }) {
+function AnalysisResults({ results, onDownload, pageUrl }) {
   const { t, i18n } = useTranslation();
 
   const [order, setOrder] = useState('asc');
@@ -80,16 +80,21 @@ function AnalysisResults({ results, onDownload }) {
     try {
       const currentLanguage = i18n.language || 'ru';
       
+      // Use sourceInfo.url if available, otherwise fall back to pageUrl prop
+      const effectiveUrl = sourceInfo?.url || pageUrl || undefined;
+      
       const exportData = {
         analysis_data: results,
         selected_statuses: selectedExportStatuses,
-        page_url: sourceInfo?.url || undefined,
+        page_url: effectiveUrl,
         language: currentLanguage
       };
 
       console.log('Export data:', {
         hasSourceInfo: !!sourceInfo,
         sourceInfoUrl: sourceInfo?.url,
+        pageUrlProp: pageUrl,
+        effectiveUrl,
         sourceInfo: sourceInfo,
         analysisDataKeys: Object.keys(results),
         hasAllWords: !!results.all_words,

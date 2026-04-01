@@ -108,9 +108,12 @@ class ExcelExporter:
                     recommendation = "Соответствует нормам" if language == "ru" else "Complies with standards"
                 
                 # Column 1: Page URL as hyperlink (if available)
-                if page_url:
-                    url_cell = ws.cell(row=current_row, column=1, value=page_url)
-                    url_cell.hyperlink = page_url
+                # Priority: word.page_url (for project exports) > global page_url > empty
+                word_page_url = word_data.get("page_url")
+                final_url = word_page_url or page_url
+                if final_url:
+                    url_cell = ws.cell(row=current_row, column=1, value=final_url)
+                    url_cell.hyperlink = final_url
                     url_cell.style = "Hyperlink"
                     url_cell.border = thin_border
                     url_cell.alignment = Alignment(horizontal="left", vertical="center")

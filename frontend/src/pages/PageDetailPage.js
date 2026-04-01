@@ -330,7 +330,7 @@ function PageDetailPage() {
     {/* 168-FZ Analysis Results using AnalysisResults Component */}
     {fz168Results && (
       <Box data-block="fz168-analysis-results" sx={{ mt: 4, mb: 4 }}>
-        <AnalysisResults results={fz168Results} />
+        <AnalysisResults results={fz168Results} pageUrl={page?.url} />
       </Box>
     )}
 

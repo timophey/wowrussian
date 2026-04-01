@@ -1,9 +1,13 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, asc, desc
 import redis.asyncio as redis
+import io
+import logging
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -16,9 +20,12 @@ from app.models.guest_session import GuestSession
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectDetail
 from app.schemas.page import PageResponse
 from app.services.file_storage import FileStorage
+from app.services.excel_exporter import ExcelExporter
 from app.tasks import crawl_project
 from app.utils.db import safe_scalar
 from app.api.auth import get_current_user, get_optional_user
+
+logger = logging.getLogger(__name__)
 
 # Optional auth: doesn't raise error if token is missing
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -733,5 +740,149 @@ async def start_project(
     
     # Trigger async crawl task
     crawl_project.delay(project_id)
+
+
+@router.get("/{project_id}/export-xlsx")
+async def export_project_xlsx(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    request: Request = None,
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access"),
+    language: Optional[str] = Query("ru", description="Language code for headers (ru or en)")
+):
+    """Export aggregated analysis results for all pages in a project to XLSX.
     
-    return {"message": "Project started"}
+    Aggregates all words from all analyzed pages in the project.
+    Each word row includes its originating page URL.
+    """
+    logger.info(f"Export endpoint called: project_id={project_id}, language={language}")
+    # Verify project access (similar to other project endpoints)
+    user = await get_optional_user(token, db) if token else None
+    guest_session = None
+    
+    if user:
+        # Authenticated user: check if project belongs to them
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+    else:
+        # No authenticated user, check guest session
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                # Check if project belongs to this guest session
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == project_id,
+                        Project.user_id == 1,  # Default user
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=404, detail="Project not found")
+                # Update guest session activity
+                from sqlalchemy import update
+                await db.execute(
+                    update(GuestSession)
+                    .where(GuestSession.id == guest_session.id)
+                    .values(last_activity=func.now())
+                )
+                await db.commit()
+            else:
+                # Invalid guest token
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid guest session"
+                )
+        else:
+            # No credentials - try default user's public projects only
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+    
+    try:
+        # Fetch all pages with fz168_raw_response for this project
+        result = await db.execute(
+            select(Page).where(
+                Page.project_id == project_id,
+                Page.fz168_raw_response.isnot(None)
+            )
+        )
+        pages = result.scalars().all()
+        logger.info(f"Export endpoint: project_id={project_id}, found {len(pages)} pages with raw_response")
+        
+        if not pages:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No analyzed pages found for this project"
+            )
+        
+        # Aggregate all words from all pages, adding page_url to each word
+        all_words_aggregated = []
+        for idx, page in enumerate(pages):
+            page_data = page.fz168_raw_response
+            # The raw_response could be the full response or just the data part
+            if isinstance(page_data, dict):
+                # If it's the full response with 'data' key
+                analysis_data = page_data.get('data', page_data)
+            else:
+                analysis_data = page_data
+            
+            words = analysis_data.get('all_words', [])
+            for word in words:
+                all_words_aggregated.append({
+                    **word,
+                    'page_url': page.url
+                })
+        
+        analysis_data = {
+            'all_words': all_words_aggregated
+        }
+        
+        # Use ExcelExporter - each word has its own page_url
+        excel_bytes = ExcelExporter.export_analysis(
+            analysis_data=analysis_data,
+            selected_statuses=None,  # All statuses
+            page_url=None,  # Will use per-word page_url
+            language=language or "ru"
+        )
+        
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"project_{project_id}_export_{timestamp}.xlsx"
+        
+        return StreamingResponse(
+            io.BytesIO(excel_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        import traceback, sys
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        print("EXCEPTION CAUGHT:", type(e).__name__, e, file=sys.stderr, flush=True)
+        print(traceback.format_exc(), file=sys.stderr, flush=True)
+        # logger.error(f"Error generating project XLSX export: {type(e).__name__}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate export: {type(e).__name__}: {str(e)}"
+        )
+    
