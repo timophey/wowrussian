@@ -529,7 +529,22 @@ function ProjectPage() {
             {pages.map((page) => (
               <TableRow key={page.id}>
                 <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {page.url}
+                  <a
+                    href={page.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                    title={page.url}
+                  >
+                    {page.url}
+                  </a>
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -631,7 +646,22 @@ function ProjectPage() {
                     getPagesWithViolations().map((page) => (
                       <TableRow key={page.id} hover>
                         <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {page.url}
+                          <a
+                            href={page.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title={page.url}
+                          >
+                            {page.url}
+                          </a>
                         </TableCell>
                         <TableCell align="center">
                           <Chip
