@@ -67,6 +67,7 @@ function ProjectPage() {
   const [pageDetail, setPageDetail] = useState(null);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [violationsDialogOpen, setViolationsDialogOpen] = useState(false);
+  const [pageDetailSource, setPageDetailSource] = useState(null); // 'pages' | 'violations' | null
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
 
@@ -265,6 +266,7 @@ function ProjectPage() {
       const res = await pageApi.get(page.project_id, page.id, guestToken);
       setPageDetail(res.data);
       setSelectedPage(page);
+      setPageDetailSource('pages');
       setPageDetailOpen(true);
     } catch (err) {
       setError(t('errors.failedToLoadPageDetails'));
@@ -332,8 +334,9 @@ function ProjectPage() {
       const res = await pageApi.get(page.project_id || id, page.id, guestToken);
       setPageDetail(res.data);
       setSelectedPage(page);
+      setPageDetailSource('violations');
       setPageDetailOpen(true);
-      setViolationsDialogOpen(false);
+      // Keep violations dialog open - don't close it here
     } catch (err) {
       setError(t('errors.failedToLoadPageDetails'));
     }
@@ -574,7 +577,19 @@ function ProjectPage() {
       </TableContainer>
 
       {/* Page Detail Dialog */}
-      <Dialog open={pageDetailOpen} onClose={() => setPageDetailOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={pageDetailOpen}
+        onClose={() => {
+          setPageDetailOpen(false);
+          // Return to violations dialog if that's where we came from
+          if (pageDetailSource === 'violations') {
+            setViolationsDialogOpen(true);
+          }
+          setPageDetailSource(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
         {pageDetail ? (
           <>
             <DialogTitle>{selectedPage?.url}</DialogTitle>
