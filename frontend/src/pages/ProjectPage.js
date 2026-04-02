@@ -145,50 +145,78 @@ function ProjectPage() {
       clearTimeout(debounceTimer.current);
     }
 
-    // Process message immediately for incremental updates
-    if (mountedRef.current) {
-      if (lastMessage.event === 'page_crawled') {
-        const { page_id, url } = lastMessage.data;
-        // Add new page to the list with basic info
-        setPages(prev => {
-          // Avoid duplicates
-          if (prev.some(p => p.id === page_id)) return prev;
-          return [...prev, {
-            id: page_id,
-            project_id: id,
-            url: url,
-            status: 'parsed', // After crawling, status is parsed
-            foreign_words_count: 0,
-            words_count: 0
-          }];
-        });
-        // Update stats incrementally
-        setStats(prev => prev ? {
-          ...prev,
-          total_pages: prev.total_pages + 1
-        } : null);
-      }
-      else if (lastMessage.event === 'page_analyzed') {
-        const { page_id, url, words_count, foreign_words_count } = lastMessage.data;
-        // Update page with analysis results
-        setPages(prev => prev.map(page =>
-          page.id === page_id
-            ? { ...page, status: 'analyzed', words_count, foreign_words_count }
-            : page
-        ));
-        // Update stats
-        setStats(prev => prev ? {
-          ...prev,
-          total_foreign_words: (prev.total_foreign_words || 0) + foreign_words_count
-        } : null);
-      }
-      else if (lastMessage.event === 'project_completed') {
-        setProject(prev => prev ? { ...prev, status: 'completed' } : null);
-      }
-      else if (lastMessage.event === 'error') {
-        setError(lastMessage.data.message);
-      }
-    }
+     // Process message immediately for incremental updates
+     if (mountedRef.current) {
+       if (lastMessage.event === 'page_crawled') {
+         const { page_id, url } = lastMessage.data;
+         // Add new page to the list with basic info
+         setPages(prev => {
+           // Avoid duplicates
+           if (prev.some(p => p.id === page_id)) return prev;
+           return [...prev, {
+             id: page_id,
+             project_id: id,
+             url: url,
+             status: 'parsed', // After crawling, status is parsed
+             foreign_words_count: 0,
+             words_count: 0
+           }];
+         });
+         // Update stats incrementally
+         setStats(prev => prev ? {
+           ...prev,
+           total_pages: prev.total_pages + 1
+         } : null);
+       }
+       else if (lastMessage.event === 'page_analyzed') {
+         const { page_id, url, words_count, foreign_words_count } = lastMessage.data;
+         // Update page with analysis results
+         setPages(prev => prev.map(page =>
+           page.id === page_id
+             ? { ...page, status: 'analyzed', words_count, foreign_words_count }
+             : page
+         ));
+         // Update stats
+         setStats(prev => prev ? {
+           ...prev,
+           total_foreign_words: (prev.total_foreign_words || 0) + foreign_words_count
+         } : null);
+       }
+       else if (lastMessage.event === 'project_completed') {
+         setProject(prev => prev ? { ...prev, status: 'completed' } : null);
+       }
+       else if (lastMessage.event === 'error') {
+         setError(lastMessage.data.message);
+       }
+        // Handle export job updates
+        else if (lastMessage.event && lastMessage.event.startsWith('export_')) {
+          const exportEvent = lastMessage.event.replace('export_', '');
+          const jobData = lastMessage.data;
+          const jobId = lastMessage.job_id;
+
+          if (exportEvent === 'progress') {
+            setExportProgress(jobData.progress || 0);
+            setExportStatus('processing');
+          } else if (exportEvent === 'completed') {
+            setExportStatus('completed');
+            setExportProgress(100);
+            // Merge job_id into jobData
+            setExportJob({ ...jobData, job_id: jobId });
+            setExportLoading(false);
+            // Auto-download the file
+            const guestToken = getGuestToken();
+            downloadExportFile(jobId, guestToken);
+          } else if (exportEvent === 'failed') {
+            setExportStatus('failed');
+            setExportError(jobData.error || 'Export failed');
+            setExportLoading(false);
+          } else if (exportEvent === 'cancelled') {
+            setExportStatus('failed');
+            setExportError('Export was cancelled');
+            setExportLoading(false);
+          }
+        }
+     }
 
     // Debounce a full sync to ensure consistency (500ms after last message)
     debounceTimer.current = setTimeout(() => {
@@ -271,74 +299,48 @@ function ProjectPage() {
     setExportDialogOpen(true);
   };
 
-  const executeExportProject = async () => {
-    setExportDialogOpen(false);
-    setExportLoading(true);
-    setExportError('');
-    setExportJob(null);
-    setExportProgress(0);
-    setExportStatus('pending');
+   const executeExportProject = async () => {
+     setExportDialogOpen(false);
+     setExportLoading(true);
+     setExportError('');
+     setExportJob(null);
+     setExportProgress(0);
+     setExportStatus('pending');
 
-    try {
-      const guestToken = getGuestToken();
-      const currentLanguage = i18n.language || 'ru';
+     try {
+       const guestToken = getGuestToken();
+       const currentLanguage = i18n.language || 'ru';
 
-      // Start async export job
-      const response = await projectApi.startAsyncExport(id, currentLanguage, guestToken);
-      const job = response.data;
-      setExportJob(job);
-      setExportStatus('processing');
+       // Start async export job
+       const response = await projectApi.startAsyncExport(id, currentLanguage, guestToken);
+       const job = response.data;
+       setExportJob(job);
+       setExportStatus('processing');
 
-      // Start polling for status
-      pollExportStatus(job.job_id, guestToken);
+       // WebSocket will handle updates automatically via the messages effect below
+       // No need for polling anymore
 
-    } catch (error) {
-      console.error('Failed to start export job:', error);
-      setExportError(error.response?.data?.detail || error.message || 'Failed to start export');
-      setExportLoading(false);
-    }
-  };
+     } catch (error) {
+       console.error('Failed to start export job:', error);
+       setExportError(error.response?.data?.detail || error.message || 'Failed to start export');
+       setExportLoading(false);
+     }
+   };
 
-  const pollExportStatus = async (jobId, guestToken) => {
-    const maxAttempts = 300; // 5 minutes with 1s interval
-    let attempts = 0;
+   const cancelExportProject = async () => {
+     if (!exportJob) return;
 
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        setExportError('Export timeout. Please try again.');
-        setExportLoading(false);
-        return;
-      }
+     try {
+       const guestToken = getGuestToken();
+       await projectApi.cancelExportJob(exportJob.job_id, guestToken);
+       // The WebSocket will receive the cancellation event and update the UI
+     } catch (error) {
+       console.error('Failed to cancel export job:', error);
+       setExportError(error.response?.data?.detail || error.message || 'Failed to cancel export');
+     }
+   };
 
-      attempts++;
 
-      try {
-        const response = await projectApi.getExportJobStatus(jobId, guestToken);
-        const job = response.data;
-        setExportJob(job);
-        setExportStatus(job.status);
-        setExportProgress(job.progress || 0);
-
-        if (job.status === 'completed') {
-          setExportLoading(false);
-          // Auto-download the file
-          downloadExportFile(jobId, guestToken);
-        } else if (job.status === 'failed') {
-          setExportLoading(false);
-          setExportError(job.error_message || 'Export failed');
-        } else {
-          // Continue polling
-          setTimeout(poll, 1000);
-        }
-      } catch (error) {
-        console.error('Error polling export status:', error);
-        setExportError('Failed to get export status');
-        setExportLoading(false);
-      }
-    };
-
-    poll();
-  };
 
   const downloadExportFile = async (jobId, guestToken) => {
     try {
@@ -551,47 +553,60 @@ function ProjectPage() {
         </Grid>
       )}
 
-      <Box data-block="project-actions" display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">{t('project.pages')}</Typography>
-        <Box data-block="action-buttons" display="flex" gap={1}>
-          <Button
-            data-block="start-download-button"
-            variant="contained"
-            startIcon={<PlayArrow />}
-            onClick={handleStart}
-            disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
-          >
-            {t('project.startDownload')}
-          </Button>
-          <Button
-            data-block="stop-button"
-            variant="outlined"
-            startIcon={<Stop />}
-            onClick={handleStop}
-            disabled={['completed', 'stopped', 'failed'].includes(project?.status)}
-          >
-            {t('project.stop')}
-          </Button>
-          <Button
-            data-block="clear-pages-button"
-            variant="outlined"
-            startIcon={<Delete />}
-            onClick={() => setClearDialogOpen(true)}
-            disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
-            color="error"
-          >
-            {t('project.clearPages')}
-          </Button>
-          <Button
-            data-block="export-project-xlsx-button"
-            variant="outlined"
-            startIcon={<FileDownload />}
-            onClick={handleExportProject}
-            disabled={pages.length === 0}
-          >
-            {t('project.exportXLSX', 'Экспорт XLSX')}
-          </Button>
+      <Box data-block="project-actions" display="flex" flexDirection="column" gap={2} mb={2}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h5">{t('project.pages')}</Typography>
+          <Box data-block="action-buttons" display="flex" gap={1}>
+            <Button
+              data-block="start-download-button"
+              variant="contained"
+              startIcon={<PlayArrow />}
+              onClick={handleStart}
+              disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
+            >
+              {t('project.startDownload')}
+            </Button>
+            <Button
+              data-block="stop-button"
+              variant="outlined"
+              startIcon={<Stop />}
+              onClick={handleStop}
+              disabled={['completed', 'stopped', 'failed'].includes(project?.status)}
+            >
+              {t('project.stop')}
+            </Button>
+            <Button
+              data-block="clear-pages-button"
+              variant="outlined"
+              startIcon={<Delete />}
+              onClick={() => setClearDialogOpen(true)}
+              disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
+              color="error"
+            >
+              {t('project.clearPages')}
+            </Button>
+            <Button
+              data-block="export-project-xlsx-button"
+              variant="outlined"
+              startIcon={exportLoading ? <CircularProgress size={20} /> : <FileDownload />}
+              onClick={handleExportProject}
+              disabled={pages.length === 0 || exportLoading}
+              sx={{ minWidth: 180 }}
+            >
+              {exportLoading 
+                ? `${t('project.exportXLSX', 'Экспорт XLSX')} (${exportProgress}%)`
+                : t('project.exportXLSX', 'Экспорт XLSX')
+              }
+            </Button>
+          </Box>
         </Box>
+        {exportLoading && (
+          <LinearProgress 
+            variant="determinate" 
+            value={exportProgress} 
+            sx={{ width: '100%' }}
+          />
+        )}
       </Box>
 
       <TableContainer data-block="pages-table" component={Paper}>
@@ -888,21 +903,34 @@ function ProjectPage() {
             <Button onClick={() => setExportDialogOpen(false)} variant="contained">
               {t('dialogs.close')}
             </Button>
-          ) : (
-            <>
-              <Button onClick={() => setExportDialogOpen(false)} disabled={exportLoading}>
-                {t('dialogs.cancel')}
-              </Button>
-              <Button
-                onClick={executeExportProject}
-                variant="contained"
-                color="primary"
-                disabled={exportLoading}
-              >
-                {exportLoading ? <CircularProgress size={24} /> : t('project.export')}
-              </Button>
-            </>
-          )}
+           ) : exportStatus === 'processing' ? (
+             <>
+               <Button 
+                 onClick={cancelExportProject} 
+                 disabled={!exportLoading}
+                 color="error"
+               >
+                 {t('project.cancelExport', 'Cancel Export')}
+               </Button>
+               <Button onClick={() => setExportDialogOpen(false)} disabled={exportLoading}>
+                 {t('dialogs.close')}
+               </Button>
+             </>
+           ) : (
+             <>
+               <Button onClick={() => setExportDialogOpen(false)}>
+                 {t('dialogs.cancel')}
+               </Button>
+               <Button
+                 onClick={executeExportProject}
+                 variant="contained"
+                 color="primary"
+                 disabled={exportLoading}
+               >
+                 {exportLoading ? <CircularProgress size={24} /> : t('project.export')}
+               </Button>
+             </>
+           )}
         </DialogActions>
       </Dialog>
     </Container>

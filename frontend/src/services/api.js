@@ -91,17 +91,21 @@ export const projectApi = {
     }
     return api.post(`/projects/${id}/export-xlsx/async`, {}, { params });
   },
-  getExportJobStatus: (jobId, guestSessionToken) => {
-    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
-    return api.get(`/projects/export-jobs/${jobId}`, { params });
-  },
-  downloadExportFile: (jobId, guestSessionToken) => {
-    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
-    return api.get(`/projects/export-jobs/${jobId}/download`, {
-      params,
-      responseType: 'blob',
-    });
-  },
+   getExportJobStatus: (jobId, guestSessionToken) => {
+     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+     return api.get(`/projects/export-jobs/${jobId}`, { params });
+   },
+   cancelExportJob: (jobId, guestSessionToken) => {
+     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+     return api.post(`/projects/export-jobs/${jobId}/cancel`, {}, { params });
+   },
+   downloadExportFile: (jobId, guestSessionToken) => {
+     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+     return api.get(`/projects/export-jobs/${jobId}/download`, {
+       params,
+       responseType: 'blob',
+     });
+   },
 };
 
 // Page API

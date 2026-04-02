@@ -1176,3 +1176,87 @@ async def download_export_file(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+@router.post("/export-jobs/{job_id}/cancel")
+async def cancel_export_job(
+    job_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Cancel a running export job."""
+    from celery.result import AsyncResult
+    from app.tasks.celery_app import celery_app
+
+    # Verify access to the job's project (same as get_export_job_status)
+    job = await safe_scalar(db, select(ExportJob).where(ExportJob.id == job_id))
+    if not job:
+        raise HTTPException(status_code=404, detail="Export job not found")
+
+    # Check if user has access to this project
+    user = await get_optional_user(token, db) if token else None
+    if user:
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == job.project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == job.project_id,
+                        Project.user_id == 1,
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=403, detail="Access denied")
+            else:
+                raise HTTPException(status_code=401, detail="Invalid guest session")
+        else:
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == job.project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+    # Check if job can be cancelled
+    if job.status not in [ExportJobStatus.PENDING, ExportJobStatus.PROCESSING]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Export job cannot be cancelled. Current status: {job.status}"
+        )
+
+    # Set cancellation flag in database
+    job.cancelled = 1
+    await db.commit()
+
+    # Also try to revoke the Celery task if it has a task ID
+    if job.celery_task_id:
+        try:
+            celery_app.control.revoke(job.celery_task_id, terminate=True)
+            logger.info(f"Cancelled Celery task {job.celery_task_id} for export job {job_id}")
+        except Exception as e:
+            logger.error(f"Failed to revoke Celery task {job.celery_task_id}: {e}")
+
+    # Publish cancellation event
+    await publish_export_update(job_id, "cancelled", {"message": "Export job was cancelled by user"})
+
+    return {"message": "Export job cancellation requested"}

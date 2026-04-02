@@ -42,6 +42,7 @@ class ExportJob(Base):
     file_size = Column(Integer, nullable=True)  # File size in bytes
     error_message = Column(String, nullable=True)
     celery_task_id = Column(String, nullable=True)
+    cancelled = Column(Integer, default=0, nullable=False)  # 0 = not cancelled, 1 = cancelled
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
