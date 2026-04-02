@@ -16,3 +16,4 @@ class User(Base):
 
     # Relationships
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    export_jobs = relationship("ExportJob", back_populates="owner", cascade="all, delete-orphan")

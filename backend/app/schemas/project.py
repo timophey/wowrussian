@@ -14,6 +14,13 @@ class ProjectStatus(str, Enum):
     FAILED = "failed"
 
 
+class ExportJobStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class ProjectBase(BaseModel):
     url: HttpUrl
 
@@ -48,6 +55,29 @@ class ProjectDetail(ProjectResponse):
     completed_count: int = 0
     total_foreign_words: int = 0
     unique_foreign_words: int = 0
+
+
+class ExportJobResponse(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    status: ExportJobStatus
+    language: str
+    progress: int
+    total_words: Optional[int] = None
+    processed_words: Optional[int] = None
+    file_size: Optional[int] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExportJobDetail(ExportJobResponse):
+    file_path: Optional[str] = None
+
 
 # Alias for compatibility with __init__.py imports
 Project = ProjectResponse

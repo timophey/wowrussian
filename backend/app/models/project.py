@@ -36,4 +36,5 @@ class Project(Base):
     owner = relationship("User", back_populates="projects")
     guest_session = relationship("GuestSession", back_populates="projects")
     pages = relationship("Page", back_populates="project", cascade="all, delete-orphan")
+    export_jobs = relationship("ExportJob", back_populates="project", cascade="all, delete-orphan")
     crawl_queue = relationship("CrawlQueue", back_populates="project", cascade="all, delete-orphan")

@@ -82,6 +82,26 @@ export const projectApi = {
     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
     return api.delete(`/projects/${id}/pages`, { params });
   },
+  // Async export
+  startAsyncExport: (id, language, guestSessionToken) => {
+    const params = new URLSearchParams();
+    params.append('language', language);
+    if (guestSessionToken) {
+      params.append('guest_session_token', guestSessionToken);
+    }
+    return api.post(`/projects/${id}/export-xlsx/async`, {}, { params });
+  },
+  getExportJobStatus: (jobId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/export-jobs/${jobId}`, { params });
+  },
+  downloadExportFile: (jobId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/export-jobs/${jobId}/download`, {
+      params,
+      responseType: 'blob',
+    });
+  },
 };
 
 // Page API

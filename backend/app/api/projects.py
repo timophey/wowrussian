@@ -1,13 +1,13 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, asc, desc
 import redis.asyncio as redis
-import io
 import logging
+from pathlib import Path
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -17,7 +17,8 @@ from app.models.user import User
 from app.models.crawl_queue import CrawlQueue, QueueStatus
 from app.models.foreign_word import ForeignWord
 from app.models.guest_session import GuestSession
-from app.schemas.project import ProjectCreate, ProjectResponse, ProjectDetail
+from app.models.export_job import ExportJob, ExportJobStatus
+from app.schemas.project import ProjectCreate, ProjectResponse, ProjectDetail, ExportJobResponse, ExportJobDetail
 from app.schemas.page import PageResponse
 from app.services.file_storage import FileStorage
 from app.services.excel_exporter import ExcelExporter
@@ -869,8 +870,8 @@ async def export_project_xlsx(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"project_{project_id}_export_{timestamp}.xlsx"
         
-        return StreamingResponse(
-            io.BytesIO(excel_bytes),
+        return Response(
+            content=excel_bytes,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
@@ -885,4 +886,293 @@ async def export_project_xlsx(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate export: {type(e).__name__}: {str(e)}"
         )
-    
+
+
+@router.post("/{project_id}/export-xlsx/async")
+async def start_async_export(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    request: Request = None,
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access"),
+    language: Optional[str] = Query("ru", description="Language code for headers (ru or en)")
+):
+    """Start asynchronous XLSX export for a project.
+
+    Returns an export job ID that can be used to check progress and download the file.
+    For large projects with many pages, this async approach prevents timeouts.
+    """
+    # Verify project access
+    user = await get_optional_user(token, db) if token else None
+    guest_session = None
+
+    if user:
+        # Authenticated user: check if project belongs to them
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        user_id = user.id
+    else:
+        # No authenticated user, check guest session
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                # Check if project belongs to this guest session
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == project_id,
+                        Project.user_id == 1,  # Default user
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=404, detail="Project not found")
+                user_id = 1
+                # Update guest session activity
+                from sqlalchemy import update
+                await db.execute(
+                    update(GuestSession)
+                    .where(GuestSession.id == guest_session.id)
+                    .values(last_activity=func.now())
+                )
+                await db.commit()
+            else:
+                # Invalid guest token
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid guest session"
+                )
+        else:
+            # No credentials - try default user's public projects only
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+            user_id = 1
+
+    # Check if project has analyzed pages
+    page_count = await safe_scalar(
+        db,
+        select(func.count()).select_from(Page).where(
+            Page.project_id == project_id,
+            Page.fz168_raw_response.isnot(None)
+        )
+    )
+    if not page_count:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No analyzed pages found for this project. Please analyze the project first."
+        )
+
+    # Create export job
+    from app.schemas.project import ExportJobResponse
+    job = ExportJob(
+        project_id=project_id,
+        user_id=user_id,
+        status=ExportJobStatus.PENDING,
+        language=language or "ru"
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    # Start Celery task
+    from app.tasks.export_tasks import export_project_xlsx
+    task = export_project_xlsx.apply_async(args=[job.id])
+    job.celery_task_id = task.id
+    await db.commit()
+
+    logger.info(f"Started async export job {job.id} for project {project_id}")
+
+    return {
+        "job_id": job.id,
+        "status": "pending",
+        "message": "Export job started. Use the job_id to check progress and download the file."
+    }
+
+
+@router.get("/export-jobs/{job_id}", response_model=ExportJobResponse)
+async def get_export_job_status(
+    job_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Get status and progress of an export job."""
+    # Verify access to the job's project
+    job = await safe_scalar(db, select(ExportJob).where(ExportJob.id == job_id))
+    if not job:
+        raise HTTPException(status_code=404, detail="Export job not found")
+
+    # Check if user has access to this project
+    user = await get_optional_user(token, db) if token else None
+    if user:
+        # Check project ownership
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == job.project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        # Check guest session
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == job.project_id,
+                        Project.user_id == 1,
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=403, detail="Access denied")
+            else:
+                raise HTTPException(status_code=401, detail="Invalid guest session")
+        else:
+            # No credentials - check default user's public project
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == job.project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+    return job
+
+
+@router.get("/export-jobs/{job_id}/download")
+async def download_export_file(
+    job_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Download the generated XLSX file for a completed export job."""
+    # Verify access (same as get_export_job_status)
+    job = await safe_scalar(db, select(ExportJob).where(ExportJob.id == job_id))
+    if not job:
+        raise HTTPException(status_code=404, detail="Export job not found")
+
+    # Check access (similar to get_export_job_status)
+    user = await get_optional_user(token, db) if token else None
+    if user:
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == job.project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == job.project_id,
+                        Project.user_id == 1,
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=403, detail="Access denied")
+            else:
+                raise HTTPException(status_code=401, detail="Invalid guest session")
+        else:
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == job.project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+    # Check if job is completed
+    if job.status != ExportJobStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Export job is not completed. Current status: {job.status}"
+        )
+
+    if not job.file_path:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Export job marked as completed but no file found"
+        )
+
+    # Read file bytes
+    try:
+        file_path = Path(job.file_path)
+        # If the stored path is relative, resolve it relative to storage path
+        if not file_path.is_absolute():
+            storage_base = Path(settings.storage_path).resolve()
+            file_path = storage_base / file_path
+        # Normalize the path
+        file_path = file_path.resolve()
+        # Security check: ensure the file is within the storage base directory
+        storage_base = Path(settings.storage_path).resolve()
+        if not file_path.is_relative_to(storage_base):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid file path"
+            )
+        if not file_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Export file not found on server"
+            )
+        file_bytes = file_path.read_bytes()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Export file not found on server"
+        )
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"project_{job.project_id}_export_{timestamp}.xlsx"
+
+    # Return raw bytes as Response
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

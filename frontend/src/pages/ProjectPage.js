@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogActions,
   TableSortLabel,
+  LinearProgress,
 } from '@mui/material';
 import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
@@ -69,6 +70,10 @@ function ProjectPage() {
   const [violationsDialogOpen, setViolationsDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [exportJob, setExportJob] = useState(null); // Current export job being tracked
+  const [exportProgress, setExportProgress] = useState(0); // 0-100
+  const [exportStatus, setExportStatus] = useState(''); // pending, processing, completed, failed
+  const [exportError, setExportError] = useState('');
   const [pageDetailSource, setPageDetailSource] = useState(null); // 'pages' | 'violations' | null
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -269,44 +274,77 @@ function ProjectPage() {
   const executeExportProject = async () => {
     setExportDialogOpen(false);
     setExportLoading(true);
+    setExportError('');
+    setExportJob(null);
+    setExportProgress(0);
+    setExportStatus('pending');
+
     try {
       const guestToken = getGuestToken();
       const currentLanguage = i18n.language || 'ru';
-      
-      // Build URL with query parameters
-      let exportUrl = `/api/projects/${id}/export-xlsx?language=${encodeURIComponent(currentLanguage)}`;
-      if (guestToken) {
-        exportUrl += `&guest_session_token=${encodeURIComponent(guestToken)}`;
+
+      // Start async export job
+      const response = await projectApi.startAsyncExport(id, currentLanguage, guestToken);
+      const job = response.data;
+      setExportJob(job);
+      setExportStatus('processing');
+
+      // Start polling for status
+      pollExportStatus(job.job_id, guestToken);
+
+    } catch (error) {
+      console.error('Failed to start export job:', error);
+      setExportError(error.response?.data?.detail || error.message || 'Failed to start export');
+      setExportLoading(false);
+    }
+  };
+
+  const pollExportStatus = async (jobId, guestToken) => {
+    const maxAttempts = 300; // 5 minutes with 1s interval
+    let attempts = 0;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setExportError('Export timeout. Please try again.');
+        setExportLoading(false);
+        return;
       }
-      
-      // Get auth token if available
-      const token = localStorage.getItem('access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      // Set up timeout (5 minutes)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min
-      
+
+      attempts++;
+
       try {
-        // Request export from backend (GET request)
-        const response = await fetch(exportUrl, {
-          method: 'GET',
-          headers: headers,
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
+        const response = await projectApi.getExportJobStatus(jobId, guestToken);
+        const job = response.data;
+        setExportJob(job);
+        setExportStatus(job.status);
+        setExportProgress(job.progress || 0);
+
+        if (job.status === 'completed') {
+          setExportLoading(false);
+          // Auto-download the file
+          downloadExportFile(jobId, guestToken);
+        } else if (job.status === 'failed') {
+          setExportLoading(false);
+          setExportError(job.error_message || 'Export failed');
+        } else {
+          // Continue polling
+          setTimeout(poll, 1000);
+        }
       } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+        console.error('Error polling export status:', error);
+        setExportError('Failed to get export status');
+        setExportLoading(false);
       }
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Export failed with status ${response.status}`);
-      }
-      
-      // Download the file
-      const blob = await response.blob();
+    };
+
+    poll();
+  };
+
+  const downloadExportFile = async (jobId, guestToken) => {
+    try {
+      const response = await projectApi.downloadExportFile(jobId, guestToken);
+      // Use the Blob directly from the response
+      const blob = response.data;
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -315,11 +353,9 @@ function ProjectPage() {
       a.click();
       window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
-      
     } catch (error) {
-      console.error('Project export error:', error);
-      alert('Failed to export project data: ' + (error.message || error));
-    } finally {
+      console.error('Download error:', error);
+      alert('Export completed but download failed: ' + (error.message || error));
       setExportLoading(false);
     }
   };
@@ -792,25 +828,81 @@ function ProjectPage() {
       </Dialog>
       
       {/* Export Project Confirmation Dialog */}
-      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
-        <DialogTitle>{t('project.exportXLSX')}</DialogTitle>
+      <Dialog open={exportDialogOpen} onClose={() => !exportLoading && setExportDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {exportStatus === 'completed' ? t('project.exportComplete') : t('project.exportXLSX')}
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            {t('project.exportConfirmMessage', 'Export all analysis results from all pages to an Excel file? This may take some time.')}
-          </Typography>
+          {exportError ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {exportError}
+            </Alert>
+          ) : exportStatus === 'processing' || exportStatus === 'pending' ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                {t('project.exportProgress', 'Processing export... This may take several minutes for large projects.')}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                <CircularProgress variant="determinate" value={exportProgress} sx={{ mr: 2 }} />
+                <Typography variant="body1" fontWeight="bold">
+                  {exportProgress}%
+                </Typography>
+              </Box>
+              <LinearProgress variant="determinate" value={exportProgress} sx={{ mt: 1 }} />
+              {exportJob?.total_words && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                  {t('project.exportWordCount', 'Processing {{count}} words', { count: exportJob.total_words })}
+                </Typography>
+              )}
+            </Box>
+          ) : exportStatus === 'completed' ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {t('project.exportReady', 'Export ready! Your download will start automatically.')}
+            </Alert>
+          ) : (
+            <Typography sx={{ mt: 2 }}>
+              {t('project.exportConfirmMessage', 'Export all analysis results from all pages to an Excel file? This may take some time.')}
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setExportDialogOpen(false)}>
-            {t('dialogs.cancel')}
-          </Button>
-          <Button
-            onClick={executeExportProject}
-            variant="contained"
-            color="primary"
-            disabled={exportLoading}
-          >
-            {exportLoading ? <CircularProgress size={24} /> : t('project.export')}
-          </Button>
+          {exportStatus === 'completed' ? (
+            <>
+              <Button onClick={() => setExportDialogOpen(false)}>
+                {t('dialogs.close')}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (exportJob) {
+                    downloadExportFile(exportJob.job_id, getGuestToken());
+                  }
+                }}
+                variant="contained"
+                color="primary"
+                startIcon={<FileDownload />}
+              >
+                {t('project.download')}
+              </Button>
+            </>
+          ) : exportStatus === 'failed' ? (
+            <Button onClick={() => setExportDialogOpen(false)} variant="contained">
+              {t('dialogs.close')}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => setExportDialogOpen(false)} disabled={exportLoading}>
+                {t('dialogs.cancel')}
+              </Button>
+              <Button
+                onClick={executeExportProject}
+                variant="contained"
+                color="primary"
+                disabled={exportLoading}
+              >
+                {exportLoading ? <CircularProgress size={24} /> : t('project.export')}
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
     </Container>

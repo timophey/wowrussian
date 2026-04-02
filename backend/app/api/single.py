@@ -4,8 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, HttpUrl, Field
 import re
 import logging
-from fastapi.responses import JSONResponse, StreamingResponse
-import io
+from fastapi.responses import JSONResponse, Response
 
 from app.core.database import get_db
 from app.services.fz168_client import FZ168Client
@@ -151,8 +150,8 @@ async def export_xlsx(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"analysis_export_{timestamp}.xlsx"
         
-        return StreamingResponse(
-            io.BytesIO(excel_bytes),
+        return Response(
+            content=excel_bytes,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
                 "Content-Disposition": f"attachment; filename={filename}"

@@ -7,6 +7,8 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import io
 import logging
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +171,13 @@ class ExcelExporter:
                 # Only headers, no data
                 ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
             
-            # Save to bytes
-            excel_bytes = io.BytesIO()
-            wb.save(excel_bytes)
-            excel_bytes.seek(0)
-            
-            return excel_bytes.getvalue()
+            # Save to a BytesIO buffer to avoid filesystem corruption
+            buffer = io.BytesIO()
+            wb.save(buffer)
+            data = buffer.getvalue()
+            buffer.close()
+            wb.close()
+            return data
             
         except Exception as e:
             logger.error(f"Error generating XLSX export: {e}")

@@ -34,6 +34,12 @@ class FileStorage:
         text_dir = self._get_project_dir(user_id, project_id) / "text"
         text_dir.mkdir(parents=True, exist_ok=True)
         return text_dir
+
+    def _get_excel_dir(self, user_id: int, project_id: int) -> Path:
+        """Get Excel export directory."""
+        excel_dir = self._get_project_dir(user_id, project_id) / "excel"
+        excel_dir.mkdir(parents=True, exist_ok=True)
+        return excel_dir
     
     def save_html(self, user_id: int, project_id: int, page_id: int, html_content: str) -> str:
         """Save HTML content to file. Returns relative path."""
@@ -92,3 +98,18 @@ class FileStorage:
         file_path = self.base_path / relative_path
         if file_path.exists():
             file_path.unlink()
+
+    def save_excel(self, user_id: int, project_id: int, filename: str, excel_bytes: bytes) -> str:
+        """Save Excel file. Returns absolute path."""
+        excel_dir = self._get_excel_dir(user_id, project_id)
+        file_path = excel_dir / filename
+
+        # Write file atomically
+        file_path.write_bytes(excel_bytes)
+
+        # Return absolute path
+        return str(file_path.resolve())
+
+    def get_excel_file_path(self, relative_path: str) -> Path:
+        """Get absolute Excel file path from relative path."""
+        return self.get_file_path(relative_path)

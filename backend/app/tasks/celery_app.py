@@ -5,7 +5,7 @@ celery_app = Celery(
     "wowrussian",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks.crawl_tasks"]
+    include=["app.tasks.crawl_tasks", "app.tasks.export_tasks"]
 )
 
 celery_app.conf.update(
