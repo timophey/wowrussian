@@ -200,6 +200,133 @@ class ExcelExporter:
             else:
                 logger.info(f"ExcelExporter: Skipping auto-filter for large dataset ({total_rows} rows)")
 
+            # Create summary sheet with aggregated statistics per page
+            logger.info(f"ExcelExporter: Creating summary sheet")
+            summary_ws = wb.create_sheet(title="Summary" if language == "en" else "Сводка")
+            
+            # Define summary headers based on language
+            summary_headers_map = {
+                "ru": [
+                    "Ссылка на страницу",
+                    "Всего слов (сумма)",
+                    "Уникальных слов",
+                    "Иностранные слова",
+                    "Запрещенные слова",
+                    "Нарушения нормативов",
+                    "Соответствующие слова"
+                ],
+                "en": [
+                    "Page URL",
+                    "Total Words (sum)",
+                    "Unique Words",
+                    "Foreign Words",
+                    "Prohibited Words",
+                    "Normative Violations",
+                    "Compliant Words"
+                ]
+            }
+            summary_headers = summary_headers_map.get(language, summary_headers_map["ru"])
+            
+            # Apply styling to summary headers
+            summary_header_font = Font(bold=True, color="FFFFFF")
+            summary_header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            summary_header_alignment = Alignment(horizontal="center", vertical="center")
+            summary_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            # Write summary headers
+            for col_idx, header in enumerate(summary_headers, 1):
+                cell = summary_ws.cell(row=1, column=col_idx, value=header)
+                cell.font = summary_header_font
+                cell.fill = summary_header_fill
+                cell.alignment = summary_header_alignment
+                cell.border = summary_border
+            
+            # Aggregate statistics by page_url
+            page_stats = {}
+            for word_data in filtered_words:
+                page_url = word_data.get("page_url") or page_url or "Unknown"
+                count = word_data.get("count", 1)
+                status = word_data.get("status", "")
+                word = word_data.get("word", "")
+                
+                if page_url not in page_stats:
+                    page_stats[page_url] = {
+                        'total_words': 0,
+                        'unique_words': set(),
+                        'foreign_count': 0,
+                        'prohibited_count': 0,
+                        'normative_count': 0,
+                        'ok_count': 0,
+                        'words': {}  # For tracking unique words with their counts
+                    }
+                
+                stats = page_stats[page_url]
+                stats['total_words'] += count
+                stats['unique_words'].add(word)
+                
+                # Track word counts for unique word calculation
+                if word not in stats['words']:
+                    stats['words'][word] = {'count': count, 'status': status}
+                else:
+                    stats['words'][word]['count'] += count
+                
+                # Count by status
+                if status == "foreign":
+                    stats['foreign_count'] += count
+                elif status == "prohibited":
+                    stats['prohibited_count'] += count
+                elif status == "normative_violation":
+                    stats['normative_count'] += count
+                elif status == "ok":
+                    stats['ok_count'] += count
+            
+            # Write summary data rows
+            summary_row = 2
+            for page_url, stats in sorted(page_stats.items()):
+                unique_words_count = len(stats['unique_words'])
+                
+                summary_ws.cell(row=summary_row, column=1, value=page_url)
+                summary_ws.cell(row=summary_row, column=2, value=stats['total_words'])
+                summary_ws.cell(row=summary_row, column=3, value=unique_words_count)
+                summary_ws.cell(row=summary_row, column=4, value=stats['foreign_count'])
+                summary_ws.cell(row=summary_row, column=5, value=stats['prohibited_count'])
+                summary_ws.cell(row=summary_row, column=6, value=stats['normative_count'])
+                summary_ws.cell(row=summary_row, column=7, value=stats['ok_count'])
+                
+                # Apply borders to all cells in the row
+                for col in range(1, len(summary_headers) + 1):
+                    summary_ws.cell(row=summary_row, column=col).border = summary_border
+                
+                summary_row += 1
+            
+            # Set column widths for summary sheet
+            summary_column_widths = {
+                1: 40,  # Page URL
+                2: 20,  # Total Words
+                3: 18,  # Unique Words
+                4: 20,  # Foreign Words
+                5: 20,  # Prohibited Words
+                6: 20,  # Normative Violations
+                7: 20   # Compliant Words
+            }
+            for col_idx, width in summary_column_widths.items():
+                summary_ws.column_dimensions[get_column_letter(col_idx)].width = width
+            
+            # Freeze header row in summary sheet
+            summary_ws.freeze_panes = "A2"
+            
+            # Add auto-filter to summary sheet
+            if len(page_stats) > 0:
+                last_summary_row = summary_row - 1
+                summary_ws.auto_filter.ref = f"A1:{get_column_letter(len(summary_headers))}{last_summary_row}"
+            
+            logger.info(f"ExcelExporter: Summary sheet created with {len(page_stats)} pages")
+
             logger.info(f"ExcelExporter: About to save workbook to BytesIO buffer")
             # Save to a BytesIO buffer to avoid filesystem corruption
             buffer = io.BytesIO()
