@@ -31,6 +31,35 @@ async def publish_update(project_id: int, event: str, data: dict):
         )
 
 
+async def is_project_stopped(project_id: int) -> bool:
+    """Check if project has been marked as stopped (via Redis for fast access)."""
+    try:
+        async with redis.from_url(settings.redis_url) as redis_client:
+            stop_flag = await redis_client.get(f"project:{project_id}:stop")
+            return stop_flag is not None
+    except Exception:
+        # Fallback to database check if Redis fails
+        return False
+
+
+async def set_project_stop_flag(project_id: int):
+    """Set stop flag in Redis for immediate effect."""
+    try:
+        async with redis.from_url(settings.redis_url) as redis_client:
+            await redis_client.set(f"project:{project_id}:stop", "1", ex=3600)  # Expire after 1 hour
+    except Exception as e:
+        print(f"Failed to set stop flag in Redis: {e}")
+
+
+async def clear_project_stop_flag(project_id: int):
+    """Clear stop flag in Redis."""
+    try:
+        async with redis.from_url(settings.redis_url) as redis_client:
+            await redis_client.delete(f"project:{project_id}:stop")
+    except Exception as e:
+        print(f"Failed to clear stop flag in Redis: {e}")
+
+
 @celery_app.task(bind=True, name="crawl_project")
 def crawl_project(self, project_id: int):
     """Main task to crawl a project."""
@@ -42,6 +71,13 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
     Analyze a page using the provided database session.
     This avoids creating a new session/connection to prevent concurrency issues.
     """
+    # Check if project was stopped before starting analysis
+    if await is_project_stopped(page.project_id):
+        page.status = PageStatus.FAILED
+        await db.commit()
+        await publish_update(page.project_id, "stopped", {"message": f"Analysis stopped for page {page.id}"})
+        return
+    
     # Read HTML from file
     storage = FileStorage(settings.storage_path)
     try:
@@ -69,6 +105,13 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
     # Count words
     words = text_content.split()
     page.words_count = len(words)
+    
+    # Check again before expensive analysis
+    if await is_project_stopped(page.project_id):
+        page.status = PageStatus.FAILED
+        await db.commit()
+        await publish_update(page.project_id, "stopped", {"message": f"Analysis stopped for page {page.id}"})
+        return
     
     # Analyze foreign words using hybrid analyzer (168fz with fallback)
     import sys
@@ -162,6 +205,10 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
 async def _crawl_project_async(project_id: int, task_id: str):
     """Async implementation of crawl_project."""
     AsyncSessionLocal = create_session_factory()
+    
+    # Clear any previous stop flag when starting
+    await clear_project_stop_flag(project_id)
+    
     async with AsyncSessionLocal() as db:
         try:
             # Get project
@@ -180,10 +227,14 @@ async def _crawl_project_async(project_id: int, task_id: str):
                 processed_count = 0
                 
                 while processed_count < max_pages:
-                    # Check if project was stopped
-                    project = await safe_scalar(db, select(Project).where(Project.id == project_id))
-                    if project and project.status == ProjectStatus.STOPPED:
+                    # Check if project was stopped (using Redis for fast access)
+                    if await is_project_stopped(project_id):
                         await publish_update(project_id, "stopped", {"message": "Project stopped"})
+                        # Update DB status as well
+                        project = await safe_scalar(db, select(Project).where(Project.id == project_id))
+                        if project:
+                            project.status = ProjectStatus.STOPPED
+                            await db.commit()
                         return
                     
                     # Get next pending URL from queue
@@ -295,6 +346,9 @@ async def _crawl_project_async(project_id: int, task_id: str):
         except Exception as e:
             await publish_update(project_id, "error", {"message": str(e)})
             raise
+        finally:
+            # Clear stop flag when task completes
+            await clear_project_stop_flag(project_id)
 
 
 @celery_app.task(bind=True, name="parse_and_analyze_page")

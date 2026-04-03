@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # 168fz integration settings
     use_fz168: bool = Field(default=True, env="USE_FZ168")
     fz168_url: str = Field(default="http://localhost:8169", env="FZ168_URL")
-    fz168_timeout: int = Field(default=10, env="FZ168_TIMEOUT")
+    fz168_timeout: int = Field(default=60, env="FZ168_TIMEOUT")  # Increased from 10 to 60 seconds
     fz168_retry_attempts: int = Field(default=3, env="FZ168_RETRY_ATTEMPTS")
 
     class Config:

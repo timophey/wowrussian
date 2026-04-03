@@ -627,7 +627,12 @@ async def stop_project(
     project.status = ProjectStatus.STOPPED
     await db.commit()
     
-    # TODO: Send stop signal to Celery task
+    # Set Redis stop flag for immediate effect on running tasks
+    try:
+        async with redis.from_url(settings.redis_url) as redis_client:
+            await redis_client.set(f"project:{project_id}:stop", "1", ex=3600)  # Expire after 1 hour
+    except Exception as e:
+        logger.warning(f"Failed to set stop flag in Redis: {e}")
     
     return {"message": "Project stopped"}
 @router.post("/{project_id}/start")

@@ -9,18 +9,38 @@ logger = logging.getLogger(__name__)
 class FZ168Client:
     """Async HTTP client for 168fz service."""
     
-    def __init__(self, base_url: str, timeout: int = 10, retry_attempts: int = 3):
+    def __init__(self, base_url: str, timeout: int = 60, retry_attempts: int = 3):
         """
         Initialize 168fz client.
         
         Args:
             base_url: Base URL of 168fz service (e.g., http://localhost:8169)
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (default: 60)
             retry_attempts: Number of retry attempts on failure
         """
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
         self.retry_attempts = retry_attempts
+    
+    def _calculate_timeout(self, text: str = None, min_timeout: int = 30) -> int:
+        """
+        Calculate appropriate timeout based on text length.
+        
+        Args:
+            text: Text to be analyzed (optional)
+            min_timeout: Minimum timeout in seconds
+            
+        Returns:
+            Calculated timeout in seconds
+        """
+        if not text:
+            return self.timeout
+        
+        # Base timeout: 30 seconds minimum
+        # Add 1 second per 1000 characters, capped at self.timeout
+        char_count = len(text)
+        calculated = min_timeout + (char_count // 1000)
+        return min(calculated, self.timeout)
     
     async def check_text(self, text: str) -> Optional[Dict[str, Any]]:
         """
