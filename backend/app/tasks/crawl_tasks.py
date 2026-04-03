@@ -246,6 +246,10 @@ async def _crawl_project_async(project_id: int, task_id: str):
                             print(f"[DEBUG] Page {page.id} analyzed successfully, status set to ANALYZED", flush=True)
                         except Exception as e:
                             print(f"[ERROR] Analysis failed for page {page.id}: {e}", flush=True)
+                            # Rollback the session to clear the broken transaction state
+                            await db.rollback()
+                            # Refresh the page object to ensure it's in a valid state
+                            await db.refresh(page)
                             # Mark page as FAILED
                             page.status = PageStatus.FAILED
                             await db.commit()
@@ -430,7 +434,8 @@ async def _parse_and_analyze_page_async(page_id: int):
         await _check_project_completion(page.project_id, db)
         
     except Exception as e:
-        # On any error, mark page as failed and publish error
+        # On any errors, mark page as failed and publish error
+        await db.rollback()  # Clear any broken transaction state
         try:
             page = await safe_scalar(db, select(Page).where(Page.id == page_id))
             if page:
