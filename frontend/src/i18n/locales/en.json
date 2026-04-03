@@ -257,6 +257,8 @@
         "status": "Status",
         "categories": "Categories",
         "recommendation": "Recommendation / Article",
+        "statusUnknown": "Unknown",
+        "statusForeignWithAlternative": "Foreign with Alternative",
         "summaryTitle": "Summary",
         "checksTitle": "Checks",
         "statisticsTitle": "Statistics",

@@ -62,6 +62,24 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
   const dictionaries = data.dictionaries_used || [];
   const sourceInfo = data.source_info;
 
+  // Helper function to process dictionaries for a word
+  const getDictionariesForWord = (wordData) => {
+    if (!wordData.dictionaries || !Array.isArray(wordData.dictionaries)) {
+      return [];
+    }
+
+    // Strip user_ prefix and get unique values
+    const processed = wordData.dictionaries.map(dict => {
+      if (typeof dict === 'string') {
+        return dict.replace(/^user_/, '');
+      }
+      return dict;
+    });
+
+    // Return unique values
+    return [...new Set(processed)];
+  };
+
   const handleSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -155,6 +173,8 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
       prohibited: { color: 'error', label: '⛔ Запрещено' },
       foreign: { color: 'warning', label: '🌐 Иностранное' },
       normative_violation: { color: 'info', label: '📚 Нарушение' },
+      unknown: { color: 'default', label: t('single.statusUnknown', { defaultValue: 'Неизвестно' }) },
+      foreign_with_alternative: { color: 'warning', label: t('single.statusForeignWithAlternative', { defaultValue: 'Иностранное с альтернативой' }) },
     };
     const s = statusMap[status] || { color: 'default', label: status };
     return <Chip label={s.label} color={s.color} size="small" />;
@@ -373,6 +393,9 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
+                    {t('single.dictionaries', { defaultValue: 'Словари' })}
+                  </TableCell>
+                  <TableCell>
                     <TableSortLabel
                       active={orderBy === 'categories'}
                       direction={orderBy === 'categories' ? order : 'asc'}
@@ -398,6 +421,17 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
                     <TableCell>{wordData.word}</TableCell>
                     <TableCell align="right">{wordData.count || 1}</TableCell>
                     <TableCell>{getStatusBadge(wordData.status)}</TableCell>
+                    <TableCell>
+                      {getDictionariesForWord(wordData).length > 0 ? (
+                        <Box display="flex" flexWrap="wrap" gap={0.5}>
+                          {getDictionariesForWord(wordData).map((dict, idx) => (
+                            <Chip key={idx} label={dict} size="small" variant="outlined" />
+                          ))}
+                        </Box>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
                     <TableCell>
                       {wordData.categories && wordData.categories.length > 0 ? (
                         <Box display="flex" flexWrap="wrap" gap={0.5}>

@@ -72,6 +72,8 @@ class ExcelExporter:
                     "prohibited": {"fill": PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"), "font_color": "9C0006"},
                     "foreign": {"fill": PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid"), "font_color": "9C6500"},
                     "normative_violation": {"fill": PatternFill(start_color="FFCC99", end_color="FFCC99", fill_type="solid"), "font_color": "663300"},
+                    "unknown": {"fill": PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid"), "font_color": "4D4D4D"},
+                    "foreign_with_alternative": {"fill": PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid"), "font_color": "7F6000"},
                 }
 
                 thin_border = Border(
@@ -91,8 +93,8 @@ class ExcelExporter:
             
             # Localized headers based on language
             headers_map = {
-                "ru": ["Ссылка на страницу", "Слово", "Кол-во", "Статус", "Категория", "Рекомендация / Статья"],
-                "en": ["Page URL", "Word", "Count", "Status", "Category", "Recommendation / Article"]
+                "ru": ["Ссылка на страницу", "Слово", "Кол-во", "Статус", "Словари", "Категория", "Рекомендация / Статья"],
+                "en": ["Page URL", "Word", "Count", "Status", "Dictionaries", "Category", "Recommendation / Article"]
             }
             headers = headers_map.get(language, headers_map["ru"])
             
@@ -120,6 +122,20 @@ class ExcelExporter:
                 word = word_data.get("word", "")
                 count = word_data.get("count", 1)
                 status = word_data.get("status", "")
+                
+                # Process dictionaries - strip user_ prefix and get unique values
+                raw_dictionaries = word_data.get("dictionaries", [])
+                if raw_dictionaries and isinstance(raw_dictionaries, list):
+                    processed_dicts = []
+                    for d in raw_dictionaries:
+                        if isinstance(d, str):
+                            d = d.removeprefix("user_")
+                        if d not in processed_dicts:
+                            processed_dicts.append(d)
+                    dictionaries_str = ", ".join(processed_dicts)
+                else:
+                    dictionaries_str = ""
+                
                 categories = word_data.get("categories", [])
                 category_str = ", ".join(categories) if categories else ""
 
@@ -146,15 +162,18 @@ class ExcelExporter:
                 # Column 4: Status
                 ws.cell(row=current_row, column=4, value=status)
 
-                # Column 5: Category
-                ws.cell(row=current_row, column=5, value=category_str)
+                # Column 5: Dictionaries
+                ws.cell(row=current_row, column=5, value=dictionaries_str)
 
-                # Column 6: Recommendation/Article
-                ws.cell(row=current_row, column=6, value=recommendation)
+                # Column 6: Category
+                ws.cell(row=current_row, column=6, value=category_str)
+
+                # Column 7: Recommendation/Article
+                ws.cell(row=current_row, column=7, value=recommendation)
 
                 # Apply styling only for smaller datasets
                 if use_styling and thin_border:
-                    for col in range(1, 7):
+                    for col in range(1, 8):
                         ws.cell(row=current_row, column=col).border = thin_border
 
                     if status in status_styles:
@@ -176,8 +195,9 @@ class ExcelExporter:
                     2: 30,  # Word
                     3: 12,  # Count
                     4: 20,  # Status
-                    5: 25,  # Category
-                    6: 50   # Recommendation/Article
+                    5: 30,  # Dictionaries
+                    6: 25,  # Category
+                    7: 50   # Recommendation/Article
                 }
                 for col_idx, width in column_widths.items():
                     ws.column_dimensions[get_column_letter(col_idx)].width = width

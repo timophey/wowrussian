@@ -257,6 +257,8 @@
       "status": "Статус",
       "categories": "Категории",
       "recommendation": "Рекомендация / Статья",
+      "statusUnknown": "Неизвестно",
+      "statusForeignWithAlternative": "Иностранное с альтернативой",
       "summaryTitle": "Сводка (Summary)",
       "checksTitle": "Проверки (Checks)",
       "statisticsTitle": "Статистика (Statistics)",

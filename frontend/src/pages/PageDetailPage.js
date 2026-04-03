@@ -335,7 +335,7 @@ function PageDetailPage() {
     )}
 
     {/* HTML Dialog */}
-      <Dialog data-block="html-dialog" open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog data-block="html-dialog" open={htmlDialogOpen} onClose={() => setHtmlDialogOpen(false)} maxWidth="xl" fullWidth>
         <DialogTitle>{t('dialogs.htmlContent')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto', bgcolor: 'grey.100' }}>
@@ -347,7 +347,7 @@ function PageDetailPage() {
       </Dialog>
 
       {/* Text Dialog */}
-      <Dialog data-block="text-dialog" open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog data-block="text-dialog" open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="xl" fullWidth>
         <DialogTitle>{t('page.extractedText')}</DialogTitle>
         <DialogContent>
           <Paper variant="outlined" sx={{ p: 2, maxHeight: 500, overflow: 'auto' }}>
