@@ -85,6 +85,7 @@ function ProjectPage() {
   const debounceTimer = useRef(null);
   const mountedRef = useRef(true);
   const currentIdRef = useRef(id);
+  const lastProcessedMessageCount = useRef(0);
 
   // Keep current id ref updated
   useEffect(() => {
@@ -131,6 +132,13 @@ function ProjectPage() {
 
   // Handle WebSocket messages with incremental updates
   useEffect(() => {
+    // Skip if there are no new messages
+    if (messages.length <= lastProcessedMessageCount.current) {
+      return;
+    }
+    // Update the count to current length
+    lastProcessedMessageCount.current = messages.length;
+
     // Get the latest message
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage) return;
