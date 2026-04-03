@@ -86,6 +86,7 @@ function ProjectPage() {
   const mountedRef = useRef(true);
   const currentIdRef = useRef(id);
   const lastProcessedMessageCount = useRef(0);
+  const downloadTriggeredForJobId = useRef(null); // Track which export job already triggered download
 
   // Keep current id ref updated
   useEffect(() => {
@@ -211,9 +212,12 @@ function ProjectPage() {
             // Merge job_id into jobData
             setExportJob({ ...jobData, job_id: jobId });
             setExportLoading(false);
-            // Auto-download the file
-            const guestToken = getGuestToken();
-            downloadExportFile(jobId, guestToken);
+            // Auto-download the file (only once per job)
+            if (downloadTriggeredForJobId.current !== jobId) {
+              downloadTriggeredForJobId.current = jobId;
+              const guestToken = getGuestToken();
+              downloadExportFile(jobId, guestToken);
+            }
           } else if (exportEvent === 'failed') {
             setExportStatus('failed');
             setExportError(jobData.error || 'Export failed');
@@ -314,13 +318,15 @@ function ProjectPage() {
      setExportJob(null);
      setExportProgress(0);
      setExportStatus('pending');
+     downloadTriggeredForJobId.current = null; // Reset download tracker for new export
 
-     try {
-       const guestToken = getGuestToken();
-       const currentLanguage = i18n.language || 'ru';
+      try {
+        const guestToken = getGuestToken();
+        const currentLanguage = i18n.language || 'ru';
+        const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-       // Start async export job
-       const response = await projectApi.startAsyncExport(id, currentLanguage, guestToken);
+        // Start async export job
+        const response = await projectApi.startAsyncExport(id, currentLanguage, guestToken, clientTimezone);
        const job = response.data;
        setExportJob(job);
        setExportStatus('processing');
@@ -358,7 +364,18 @@ function ProjectPage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `project_export_${id}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+      
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `project_words_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(downloadUrl);
@@ -897,7 +914,12 @@ function ProjectPage() {
               <Button
                 onClick={() => {
                   if (exportJob) {
-                    downloadExportFile(exportJob.job_id, getGuestToken());
+                    const jobId = exportJob.job_id;
+                    // Only download if not already triggered for this job
+                    if (downloadTriggeredForJobId.current !== jobId) {
+                      downloadTriggeredForJobId.current = jobId;
+                      downloadExportFile(jobId, getGuestToken());
+                    }
                   }
                 }}
                 variant="contained"

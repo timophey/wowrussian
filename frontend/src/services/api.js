@@ -83,9 +83,10 @@ export const projectApi = {
     return api.delete(`/projects/${id}/pages`, { params });
   },
   // Async export
-  startAsyncExport: (id, language, guestSessionToken) => {
+  startAsyncExport: (id, language, guestSessionToken, timezone) => {
     const params = new URLSearchParams();
     params.append('language', language);
+    params.append('timezone', timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     if (guestSessionToken) {
       params.append('guest_session_token', guestSessionToken);
     }

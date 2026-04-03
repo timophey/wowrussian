@@ -895,7 +895,8 @@ async def start_async_export(
     request: Request = None,
     token: str | None = Depends(oauth2_scheme_optional),
     guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access"),
-    language: Optional[str] = Query("ru", description="Language code for headers (ru or en)")
+    language: Optional[str] = Query("ru", description="Language code for headers (ru or en)"),
+    timezone: Optional[str] = Query("UTC", description="Client's timezone for filename (e.g., Asia/Yekaterinburg)")
 ):
     """Start asynchronous XLSX export for a project.
 
@@ -986,7 +987,8 @@ async def start_async_export(
         project_id=project_id,
         user_id=user_id,
         status=ExportJobStatus.PENDING,
-        language=language or "ru"
+        language=language or "ru",
+        timezone=timezone or "UTC"
     )
     db.add(job)
     await db.commit()
@@ -1160,15 +1162,13 @@ async def download_export_file(
                 detail="Export file not found on server"
             )
         file_bytes = file_path.read_bytes()
+        # Use the actual filename from the file path
+        filename = file_path.name
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Export file not found on server"
         )
-
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"project_{job.project_id}_export_{timestamp}.xlsx"
 
     # Return raw bytes as Response
     return Response(

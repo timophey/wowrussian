@@ -6,6 +6,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from celery import current_task
 
 from app.tasks.celery_app import celery_app
@@ -218,8 +219,25 @@ async def _export_project_xlsx_async(job_id: int, celery_task_id: str):
             try:
                 logger.info(f"Export job {job_id}: Starting file save to storage")
                 storage = FileStorage(settings.storage_path)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"project_{job.project_id}_export_{timestamp}.xlsx"
+                
+                # Generate filename with domain name and timezone-aware datetime
+                # Format: project_words_{domain_name}_{datetime}.xlsx
+                domain_name = project.domain
+                # Sanitize domain name for filename (replace special characters)
+                safe_domain = domain_name.replace('/', '_').replace(':', '_').replace('?', '_')
+                
+                # Get timezone-aware datetime using client's timezone
+                client_timezone = job.timezone or "UTC"
+                try:
+                    tz = ZoneInfo(client_timezone)
+                except ZoneInfoNotFoundError:
+                    logger.warning(f"Unknown timezone: {client_timezone}, falling back to UTC")
+                    tz = ZoneInfo("UTC")
+                
+                local_datetime = datetime.now(tz)
+                timestamp = local_datetime.strftime("%Y%m%d_%H%M%S")
+                filename = f"project_words_{safe_domain}_{timestamp}.xlsx"
+                
                 file_path = storage.save_excel(
                     user_id=job.user_id,
                     project_id=job.project_id,

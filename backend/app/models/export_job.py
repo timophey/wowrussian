@@ -35,6 +35,7 @@ class ExportJob(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status = Column(SQLEnum(ExportJobStatus, name='exportjobstatus', values_callable=_export_job_status_values), default=ExportJobStatus.PENDING, nullable=False)
     language = Column(String, default="ru", nullable=False)
+    timezone = Column(String, default="UTC", nullable=False)  # Client's timezone (e.g., "Asia/Yekaterinburg")
     progress = Column(Integer, default=0)  # 0-100 percentage
     total_words = Column(Integer, default=0)
     processed_words = Column(Integer, default=0)
