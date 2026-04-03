@@ -23,7 +23,8 @@
     "email": "Email",
     "password": "Password",
     "noAccount": "Don't have an account? Register",
-    "haveAccount": "Already have an account? Login"
+    "haveAccount": "Already have an account? Login",
+    "registrationSuccess": "Registration successful! You can now log in with your credentials."
   },
   "projects": {
     "title": "Projects",

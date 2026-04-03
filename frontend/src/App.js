@@ -16,13 +16,14 @@ import './i18n';
 
 function Header() {
   const { t, i18n } = useTranslation();
-  const { user, logout, isAuthenticated, login } = useAuth();
+  const { user, logout, isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
 
   const [authDialogOpen, setAuthDialogOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('login');
   const [authLoading, setAuthLoading] = React.useState(false);
   const [authError, setAuthError] = React.useState('');
+  const [authSuccess, setAuthSuccess] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
@@ -41,6 +42,7 @@ function Header() {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setAuthSuccess('');
     setAuthLoading(true);
 
     try {
@@ -48,17 +50,21 @@ function Header() {
       if (authMode === 'login') {
         result = await login(email, password);
       } else {
-        result = await authApi.register(email, password);
-        // Auto-login after registration
-        if (result.success) {
-          result = await login(email, password);
-        }
+        result = await register(email, password);
       }
 
       if (result.success) {
-        setAuthDialogOpen(false);
-        setEmail('');
-        setPassword('');
+        if (authMode === 'register') {
+          // Show success message and switch to login
+          setAuthSuccess(t('home.registrationSuccess'));
+          setAuthMode('login');
+          setEmail('');
+          setPassword('');
+        } else {
+          setAuthDialogOpen(false);
+          setEmail('');
+          setPassword('');
+        }
       } else {
         setAuthError(result.error);
       }
@@ -167,6 +173,11 @@ function Header() {
               required
               inputProps={{ minLength: 8 }}
             />
+            {authSuccess && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                {authSuccess}
+              </Alert>
+            )}
             {authError && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {authError}

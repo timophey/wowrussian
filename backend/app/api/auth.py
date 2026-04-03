@@ -26,7 +26,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against its hash.
-    Supports both bcrypt hashes and plain text (for legacy/development)."""
+    Supports both bcrypt hashes and plain text (for legacy/development).
+    
+    Bcrypt has a maximum password length of 72 bytes, so we truncate
+    longer passwords to match the hashing behavior.
+    """
+    # Truncate password to 72 bytes (bcrypt limitation) for consistent verification
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        plain_password = password_bytes[:72].decode('utf-8', errors='ignore')
+    
     # If hash doesn't look like a bcrypt hash, treat as plain text
     if not hashed_password.startswith('$2b$') and not hashed_password.startswith('$2a$'):
         # Legacy: plain text comparison
@@ -36,7 +45,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
+    """Hash a password.
+    
+    Bcrypt has a maximum password length of 72 bytes, so we truncate
+    longer passwords to prevent ValueError.
+    """
+    # Truncate password to 72 bytes (bcrypt limitation)
+    # Using UTF-8 encoding to properly count bytes
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password = password_bytes[:72].decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
 
 

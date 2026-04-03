@@ -53,6 +53,7 @@ function ProjectsListPage() {
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [viewingUserId, setViewingUserId] = useState(null);
@@ -157,6 +158,7 @@ function ProjectsListPage() {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setAuthSuccess('');
     setAuthLoading(true);
 
     try {
@@ -168,11 +170,19 @@ function ProjectsListPage() {
       }
 
       if (result.success) {
-        setAuthDialogOpen(false);
-        setEmail('');
-        setPassword('');
-        // Refresh projects after successful auth
-        fetchProjects({ sort_by: sortBy, sort_order: sortOrder });
+        if (authMode === 'register') {
+          // Show success message and switch to login
+          setAuthSuccess(t('home.registrationSuccess'));
+          setAuthMode('login');
+          setEmail('');
+          setPassword('');
+        } else {
+          setAuthDialogOpen(false);
+          setEmail('');
+          setPassword('');
+          // Refresh projects after successful auth
+          fetchProjects({ sort_by: sortBy, sort_order: sortOrder });
+        }
       } else {
         setAuthError(result.error);
       }
@@ -187,6 +197,7 @@ function ProjectsListPage() {
     setAuthMode(mode);
     setAuthDialogOpen(true);
     setAuthError('');
+    setAuthSuccess('');
     setEmail('');
     setPassword('');
   };
@@ -253,6 +264,11 @@ function ProjectsListPage() {
                  required
                  inputProps={{ minLength: 8 }}
                />
+               {authSuccess && (
+                 <Alert severity="success" sx={{ mt: 2 }}>
+                   {authSuccess}
+                 </Alert>
+               )}
                {authError && (
                  <Alert severity="error" sx={{ mt: 2 }}>
                    {authError}
