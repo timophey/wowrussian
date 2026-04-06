@@ -1,4 +1,5 @@
 from typing import Annotated, List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import Response
@@ -18,6 +19,7 @@ from app.models.crawl_queue import CrawlQueue, QueueStatus
 from app.models.foreign_word import ForeignWord
 from app.models.guest_session import GuestSession
 from app.models.export_job import ExportJob, ExportJobStatus
+from app.models.whitelist_word import WhitelistWord
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectDetail, ExportJobResponse, ExportJobDetail
 from app.schemas.page import PageResponse
 from app.services.file_storage import FileStorage
@@ -1265,3 +1267,184 @@ async def cancel_export_job(
     await publish_export_update(job_id, "cancelled", {"message": "Export job was cancelled by user"})
 
     return {"message": "Export job cancellation requested"}
+
+
+# ==================== WHITELIST WORDS API ====================
+
+
+class WhitelistWordResponse(BaseModel):
+    """Response model for a single whitelist word."""
+    id: int
+    word: str
+    project_id: int
+    created_at: datetime
+
+
+class WhitelistWordCreate(BaseModel):
+    """Request model for creating a whitelist word."""
+    word: str = Field(..., min_length=1, max_length=100)
+
+
+class WhitelistWordCreateBatch(BaseModel):
+    """Request model for creating multiple whitelist words."""
+    words: List[str] = Field(..., min_items=1)
+
+
+@router.get("/{project_id}/whitelist", response_model=List[WhitelistWordResponse])
+async def get_project_whitelist(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Get all whitelist words for a project."""
+    # Verify project access
+    project = await _verify_project_access(db, project_id, token, guest_session_token)
+    if not project:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Get whitelist words
+    result = await db.execute(
+        select(WhitelistWord)
+        .where(WhitelistWord.project_id == project_id)
+        .order_by(asc(WhitelistWord.word))
+    )
+    whitelist_words = result.scalars().all()
+
+    return [
+        WhitelistWordResponse(
+            id=wl.id,
+            word=wl.word,
+            project_id=wl.project_id,
+            created_at=wl.created_at
+        )
+        for wl in whitelist_words
+    ]
+
+
+@router.post("/{project_id}/whitelist", response_model=List[WhitelistWordResponse], status_code=status.HTTP_201_CREATED)
+async def add_project_whitelist_words(
+    project_id: int,
+    request: WhitelistWordCreateBatch,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Add words to project whitelist."""
+    # Verify project access
+    project = await _verify_project_access(db, project_id, token, guest_session_token)
+    if not project:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Get existing words to avoid duplicates
+    result = await db.execute(
+        select(WhitelistWord.word).where(WhitelistWord.project_id == project_id)
+    )
+    existing_words = set(result.scalars().all())
+
+    # Add new words (skip duplicates)
+    added_words = []
+    for word in request.words:
+        word_lower = word.lower().strip()
+        if word_lower and word_lower not in existing_words:
+            whitelist_word = WhitelistWord(
+                project_id=project_id,
+                word=word_lower
+            )
+            db.add(whitelist_word)
+            added_words.append(whitelist_word)
+            existing_words.add(word_lower)
+
+    await db.commit()
+
+    # Refresh to get IDs and timestamps
+    for wl in added_words:
+        await db.refresh(wl)
+
+    return [
+        WhitelistWordResponse(
+            id=wl.id,
+            word=wl.word,
+            project_id=wl.project_id,
+            created_at=wl.created_at
+        )
+        for wl in added_words
+    ]
+
+
+@router.delete("/{project_id}/whitelist/{word_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_whitelist_word(
+    project_id: int,
+    word_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Remove a word from project whitelist."""
+    # Verify project access
+    project = await _verify_project_access(db, project_id, token, guest_session_token)
+    if not project:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Get the whitelist word
+    result = await db.execute(
+        select(WhitelistWord).where(
+            WhitelistWord.id == word_id,
+            WhitelistWord.project_id == project_id
+        )
+    )
+    whitelist_word = result.scalar_one_or_none()
+
+    if not whitelist_word:
+        raise HTTPException(status_code=404, detail="Whitelist word not found")
+
+    await db.delete(whitelist_word)
+    await db.commit()
+
+
+async def _verify_project_access(
+    db: AsyncSession,
+    project_id: int,
+    token: Optional[str],
+    guest_session_token: Optional[str]
+) -> Optional[Project]:
+    """Verify user has access to a project. Returns project if access granted."""
+    user = await get_optional_user(token, db) if token else None
+    
+    if user:
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user.id
+            )
+        )
+        return project
+    else:
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == project_id,
+                        Project.user_id == 1,
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                return project
+        else:
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            return project
+    
+    return None

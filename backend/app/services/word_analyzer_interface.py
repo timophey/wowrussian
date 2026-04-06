@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -15,9 +15,13 @@ class IWordAnalyzer(ABC):
     """Interface for word analysis."""
     
     @abstractmethod
-    async def analyze(self, text: str) -> Dict[str, Any]:
+    async def analyze(self, text: str, allowed_words: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Analyze text and return statistics.
+        
+        Args:
+            text: Text to analyze
+            allowed_words: Optional list of words to exclude from violations
         
         Returns:
             {
@@ -40,8 +44,12 @@ class LocalWordAnalyzer(IWordAnalyzer):
     def __init__(self):
         self._analyzer = WordAnalyzer()
     
-    async def analyze(self, text: str) -> Dict[str, Any]:
-        """Run analysis in thread pool to avoid blocking."""
+    async def analyze(self, text: str, allowed_words: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Run analysis in thread pool to avoid blocking.
+        
+        Note: Local analyzer doesn't support allowed_words, but accepts the parameter
+        for interface compatibility.
+        """
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             result = await loop.run_in_executor(
@@ -171,9 +179,13 @@ class HybridWordAnalyzer(IWordAnalyzer):
         self.local_analyzer = LocalWordAnalyzer()
         self._fz168_available: Optional[bool] = None
     
-    async def analyze(self, text: str) -> Dict[str, Any]:
+    async def analyze(self, text: str, allowed_words: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Analyze text using 168fz with fallback to local analyzer.
+        
+        Args:
+            text: Text to analyze
+            allowed_words: Optional list of words to exclude from violations
         
         Returns:
             Analysis results in WowRussian format
@@ -181,18 +193,18 @@ class HybridWordAnalyzer(IWordAnalyzer):
         # If 168fz is disabled, use local immediately
         if not self.use_fz168:
             logger.info("168fz disabled, using local analyzer")
-            return await self.local_analyzer.analyze(text)
+            return await self.local_analyzer.analyze(text, allowed_words)
         
         # Try 168fz
         try:
             logger.debug("Attempting analysis with 168fz")
-            response = await self.fz168_client.check_text(text)
+            response = await self.fz168_client.check_text(text, allowed_words=allowed_words)
             result = _map_fz168_response_to_analyzer_format(response)
             logger.info("Successfully used 168fz for analysis")
             return result
             
         except Exception as e:
             logger.warning(f"168fz analysis failed: {e}, falling back to local analyzer")
-            result = await self.local_analyzer.analyze(text)
+            result = await self.local_analyzer.analyze(text, allowed_words)
             logger.info("Local analyzer used (fallback)")
             return result

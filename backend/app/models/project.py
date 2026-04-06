@@ -38,3 +38,4 @@ class Project(Base):
     pages = relationship("Page", back_populates="project", cascade="all, delete-orphan")
     export_jobs = relationship("ExportJob", back_populates="project", cascade="all, delete-orphan")
     crawl_queue = relationship("CrawlQueue", back_populates="project", cascade="all, delete-orphan")
+    whitelist_words = relationship("WhitelistWord", back_populates="project", cascade="all, delete-orphan")

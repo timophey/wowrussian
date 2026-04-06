@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,8 +30,9 @@ import {
   AccordionSummary,
   AccordionDetails,
   Link,
+  Checkbox,
 } from '@mui/material';
-import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload, ExpandMore } from '@mui/icons-material';
+import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload, ExpandMore, List, Add, Close } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +50,72 @@ const STATUS_COLORS = {
   failed: 'error',
   queued: 'default',
 };
+
+// Memoized word row component with internal selection state
+const ForeignWordRow = React.memo(({ word, wordCount, pagesCount, pages, isAlreadyInWhitelist, onToggle, onViewPage }) => {
+  const [isSelected, setIsSelected] = useState(false);
+
+  const handleChange = useCallback((e) => {
+    const checked = e.target.checked;
+    setIsSelected(checked);
+    onToggle(word, checked);
+  }, [word, onToggle]);
+
+  return (
+    <TableRow sx={isAlreadyInWhitelist ? { opacity: 0.6 } : {}}>
+      <TableCell padding="checkbox">
+        {isAlreadyInWhitelist ? (
+          <Chip label="✓" size="small" color="success" variant="filled" />
+        ) : (
+          <Checkbox
+            checked={isSelected}
+            onChange={handleChange}
+            size="small"
+          />
+        )}
+      </TableCell>
+      <TableCell>
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Typography>{word}</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            {pages && pages.length > 0 ? (
+              <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                {pages.map((page, pageIndex) => (
+                  <Box component="li" key={pageIndex} sx={{ mb: 0.5 }}>
+                    <Link
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onViewPage(page);
+                      }}
+                      underline="hover"
+                    >
+                      {page.url}
+                    </Link>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No pages found.
+              </Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+      </TableCell>
+      <TableCell align="right">{wordCount}</TableCell>
+      <TableCell>
+        <Chip
+          label={pagesCount}
+          size="small"
+          variant="outlined"
+        />
+      </TableCell>
+    </TableRow>
+  );
+});
 
 function ProjectPage() {
   const { t, i18n } = useTranslation();
@@ -84,6 +151,43 @@ function ProjectPage() {
   const [uniqueWordsDialogOpen, setUniqueWordsDialogOpen] = useState(false);
   const [uniqueForeignWords, setUniqueForeignWords] = useState([]);
   const [uniqueWordsLoading, setUniqueWordsLoading] = useState(false);
+  const [whitelistDialogOpen, setWhitelistDialogOpen] = useState(false);
+  const [whitelistWords, setWhitelistWords] = useState([]);
+  const [whitelistLoading, setWhitelistLoading] = useState(false);
+  const [selectedCount, setSelectedCount] = useState(0);
+
+  // Ref for tracking selected words (managed by child components)
+  const selectedWordsRef = useRef(new Set());
+
+  // Ref for whitelist words to avoid recreating callbacks
+  const whitelistWordsRef = useRef(new Set());
+
+  // Memoized Set for O(1) whitelist lookups (for UI rendering only)
+  // Note: whitelist words are stored in lowercase, so we compare lowercase
+  const whitelistWordsSet = useMemo(
+    () => new Set(whitelistWords.map(w => w.word.toLowerCase())),
+    [whitelistWords]
+  );
+
+  // Update ref when whitelistWords changes
+  useEffect(() => {
+    whitelistWordsRef.current = new Set(whitelistWords.map(w => w.word.toLowerCase()));
+  }, [whitelistWords]);
+
+  // Memoized checkbox handler - uses ref to avoid recreating callback
+  const handleWordSelection = useCallback((word, isChecked) => {
+    // Don't allow selecting words already in whitelist (case-insensitive comparison)
+    if (whitelistWordsRef.current.has(word.toLowerCase())) return;
+    
+    // Update the selected words ref directly (no state update = no re-render of other rows)
+    if (isChecked) {
+      selectedWordsRef.current.add(word);
+    } else {
+      selectedWordsRef.current.delete(word);
+    }
+    // Update the count state for the button (only this component re-renders)
+    setSelectedCount(selectedWordsRef.current.size);
+  }, []);
 
   const { messages, isConnected } = useWebSocket(id);
 
@@ -109,16 +213,18 @@ function ProjectPage() {
     try {
       // Use guest session token if not authenticated
       const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
-      const [projectRes, pagesRes, statsRes] = await Promise.all([
+      const [projectRes, pagesRes, statsRes, whitelistRes] = await Promise.all([
         projectApi.get(id, guestToken),
         pageApi.list(id, { sort_by: sortBy, sort_order: sortOrder, guest_session_token: guestToken }),
         statsApi.get(id, guestToken),
+        projectApi.getWhitelist(id, guestToken),
       ]);
       // Only update state if this is still the current project
       if (mountedRef.current && currentIdRef.current === id) {
         setProject(projectRes.data);
         setPages(pagesRes.data);
         setStats(statsRes.data);
+        setWhitelistWords(whitelistRes.data || []);
         setError(''); // Clear any previous errors on success
       }
     } catch (err) {
@@ -491,6 +597,67 @@ function ProjectPage() {
     setUniqueWordsDialogOpen(true);
   };
 
+  // Whitelist management functions
+  const handleOpenWhitelistDialog = async () => {
+    setWhitelistLoading(true);
+    try {
+      const guestToken = getGuestToken();
+      const res = await projectApi.getWhitelist(id, guestToken);
+      setWhitelistWords(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch whitelist words:', err);
+      setError(t('errors.failedToLoad'));
+    } finally {
+      setWhitelistLoading(false);
+    }
+    setWhitelistDialogOpen(true);
+  };
+
+  const handleAddToWhitelist = async (words) => {
+    try {
+      const guestToken = getGuestToken();
+      const wordsArray = Array.isArray(words) ? words : [words];
+      const res = await projectApi.addToWhitelist(id, wordsArray, guestToken);
+      // Update the whitelist state with the new words
+      setWhitelistWords(prev => [...prev, ...(res.data || [])]);
+    } catch (err) {
+      console.error('Failed to add words to whitelist:', err);
+      setError(t('errors.failedToUpdate'));
+    }
+  };
+
+  const handleRemoveFromWhitelist = async (wordId) => {
+    try {
+      const guestToken = getGuestToken();
+      await projectApi.removeFromWhitelist(id, wordId, guestToken);
+      // Remove the word from the state
+      setWhitelistWords(prev => prev.filter(w => w.id !== wordId));
+    } catch (err) {
+      console.error('Failed to remove word from whitelist:', err);
+      setError(t('errors.failedToUpdate'));
+    }
+  };
+
+  const handleAddSelectedWordsToWhitelist = async () => {
+    const selectedWords = Array.from(selectedWordsRef.current);
+    if (selectedWords.length === 0) return;
+    // Filter out words that are already in the whitelist (case-insensitive comparison)
+    const newWords = selectedWords.filter(word => !whitelistWordsRef.current.has(word.toLowerCase()));
+    if (newWords.length === 0) return;
+    await handleAddToWhitelist(newWords);
+    // Clear the selected words ref
+    selectedWordsRef.current.clear();
+    setSelectedCount(0);
+    // Refresh the whitelist from server to update the UI
+    try {
+      const guestToken = getGuestToken();
+      const res = await projectApi.getWhitelist(id, guestToken);
+      setWhitelistWords(res.data || []);
+    } catch (err) {
+      console.error('Failed to refresh whitelist:', err);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -604,6 +771,29 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
+            <Card
+              data-block="stat-card-whitelist"
+              sx={{
+                height: '100%',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
+              }}
+              onClick={handleOpenWhitelistDialog}
+            >
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  {t('project.whitelistTitle', 'Whitelist')}
+                </Typography>
+                <Typography variant="h4">{whitelistWords.length || 0}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('project.whitelistWords', 'words')}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12}>
             <Card data-block="stat-card-risk-level" sx={{ height: '100%' }}>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -1035,56 +1225,97 @@ function ProjectPage() {
               {t('project.noUniqueWords', 'No unique foreign words found.')}
             </Alert>
           ) : (
+            <>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={handleAddSelectedWordsToWhitelist}
+                  disabled={selectedCount === 0}
+                  size="small"
+                >
+                  {t('project.addToWhitelist', 'Add to Whitelist')} ({selectedCount})
+                </Button>
+              </Box>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox"></TableCell>
+                      <TableCell>{t('single.word', 'Word')}</TableCell>
+                      <TableCell align="right">{t('single.count', 'Count')}</TableCell>
+                      <TableCell>{t('project.pages', 'Pages')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {uniqueForeignWords.map((wordData, index) => (
+                      <ForeignWordRow
+                        key={wordData.word}
+                        word={wordData.word}
+                        wordCount={wordData.total_count}
+                        pagesCount={wordData.pages?.length || 0}
+                        pages={wordData.pages || []}
+                        isAlreadyInWhitelist={whitelistWordsSet.has(wordData.word.toLowerCase())}
+                        onToggle={handleWordSelection}
+                        onViewPage={(page) => handleViewPage({ id: page.id, project_id: id, url: page.url })}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUniqueWordsDialogOpen(false)}>
+            {t('dialogs.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Whitelist Management Dialog */}
+      <Dialog
+        open={whitelistDialogOpen}
+        onClose={() => setWhitelistDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {t('project.whitelistTitle', 'Whitelist Words')} ({whitelistWords.length})
+        </DialogTitle>
+        <DialogContent>
+          {whitelistLoading ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : whitelistWords.length === 0 ? (
+            <Alert severity="info">
+              {t('project.noWhitelistWords', 'No whitelist words added yet. Words added here will be excluded from violations on the next analysis.')}
+            </Alert>
+          ) : (
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('single.word', 'Word')}</TableCell>
-                    <TableCell align="right">{t('single.count', 'Count')}</TableCell>
-                    <TableCell>{t('project.pages', 'Pages')}</TableCell>
+                    <TableCell align="right">{t('dialogs.actions', 'Actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {uniqueForeignWords.map((wordData, index) => (
-                    <TableRow key={index}>
+                  {whitelistWords.map((wordData) => (
+                    <TableRow key={wordData.id}>
                       <TableCell>
-                        <Accordion>
-                          <AccordionSummary expandIcon={<ExpandMore />}>
-                            <Typography>{wordData.word}</Typography>
-                          </AccordionSummary>
-                          <AccordionDetails>
-                            {wordData.pages && wordData.pages.length > 0 ? (
-                              <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                                {wordData.pages.map((page, pageIndex) => (
-                                  <Box component="li" key={pageIndex} sx={{ mb: 0.5 }}>
-                                    <Link
-                                      href="#"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        handleViewPage({ id: page.id, project_id: id, url: page.url });
-                                      }}
-                                      underline="hover"
-                                    >
-                                      {page.url}
-                                    </Link>
-                                  </Box>
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">
-                                {t('project.noPages', 'No pages found.')}
-                              </Typography>
-                            )}
-                          </AccordionDetails>
-                        </Accordion>
+                        <Typography>{wordData.word}</Typography>
                       </TableCell>
-                      <TableCell align="right">{wordData.total_count}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={wordData.pages?.length || 0}
+                      <TableCell align="right">
+                        <IconButton
                           size="small"
-                          variant="outlined"
-                        />
+                          color="error"
+                          onClick={() => handleRemoveFromWhitelist(wordData.id)}
+                          title={t('project.removeFromWhitelist', 'Remove from whitelist')}
+                        >
+                          <Close />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1094,7 +1325,7 @@ function ProjectPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUniqueWordsDialogOpen(false)}>
+          <Button onClick={() => setWhitelistDialogOpen(false)}>
             {t('dialogs.close')}
           </Button>
         </DialogActions>

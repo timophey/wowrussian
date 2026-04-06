@@ -91,7 +91,12 @@
     },
     "uniqueForeignWords": "Unique Foreign Words",
     "noUniqueWords": "No unique foreign words found.",
-    "noPages": "No pages found."
+    "noPages": "No pages found.",
+    "whitelistTitle": "Whitelist",
+    "whitelistWords": "words",
+    "noWhitelistWords": "No whitelist words added yet. Words added here will be excluded from violations on the next analysis.",
+    "addToWhitelist": "Add to Whitelist",
+    "removeFromWhitelist": "Remove from whitelist"
   },
  "violationsDialog": {
    "title": "Violations Details",

@@ -86,6 +86,19 @@ export const projectApi = {
     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
     return api.delete(`/projects/${id}/pages`, { params });
   },
+  // Whitelist API
+  getWhitelist: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/projects/${id}/whitelist`, { params });
+  },
+  addToWhitelist: (id, words, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.post(`/projects/${id}/whitelist`, { words }, { params });
+  },
+  removeFromWhitelist: (id, wordId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.delete(`/projects/${id}/whitelist/${wordId}`, { params });
+  },
   // Async export
   startAsyncExport: (id, language, guestSessionToken, timezone) => {
     const params = new URLSearchParams();

@@ -113,11 +113,21 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
         await publish_update(page.project_id, "stopped", {"message": f"Analysis stopped for page {page.id}"})
         return
     
-    # Analyze foreign words using hybrid analyzer (168fz with fallback)
+    # Load project whitelist words
+    from app.models.whitelist_word import WhitelistWord
+    whitelist_result = await db.execute(
+        select(WhitelistWord).where(WhitelistWord.project_id == page.project_id)
+    )
+    whitelist_words = [wl.word for wl in whitelist_result.scalars().all()]
+    
+    # DEBUG: Log whitelist words
     import sys
-    print(f"\n\n*** ANALYZING PAGE {page.id} with text length {len(text_content)} ***\n", file=sys.stderr)
+    print(f"[DEBUG] Page {page.id} whitelist words loaded: {whitelist_words}", file=sys.stderr)
+    
+    # Analyze foreign words using hybrid analyzer (168fz with fallback)
+    print(f"\n\n*** ANALYZING PAGE {page.id} with text length {len(text_content)}, whitelist words: {len(whitelist_words)} ***\n", file=sys.stderr)
     analyzer = HybridWordAnalyzer()
-    analysis = await analyzer.analyze(text_content)
+    analysis = await analyzer.analyze(text_content, allowed_words=whitelist_words if whitelist_words else None)
     page.foreign_words_count = analysis['foreign_words']
     
     # Save 168fz metadata if available (when 168fz was used)
@@ -405,9 +415,16 @@ async def _parse_and_analyze_page_async(page_id: int):
         words = text_content.split()
         page.words_count = len(words)
         
+        # Load project whitelist words
+        from app.models.whitelist_word import WhitelistWord
+        whitelist_result = await db.execute(
+            select(WhitelistWord).where(WhitelistWord.project_id == page.project_id)
+        )
+        whitelist_words = [wl.word for wl in whitelist_result.scalars().all()]
+        
         # Analyze foreign words using hybrid analyzer (168fz with fallback)
         analyzer = HybridWordAnalyzer()
-        analysis = await analyzer.analyze(text_content)
+        analysis = await analyzer.analyze(text_content, allowed_words=whitelist_words if whitelist_words else None)
         page.foreign_words_count = analysis['foreign_words']
         
         # Save 168fz metadata if available (when 168fz was used)

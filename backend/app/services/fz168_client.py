@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import aiohttp
 
 logger = logging.getLogger(__name__)
@@ -42,12 +42,13 @@ class FZ168Client:
         calculated = min_timeout + (char_count // 1000)
         return min(calculated, self.timeout)
     
-    async def check_text(self, text: str) -> Optional[Dict[str, Any]]:
+    async def check_text(self, text: str, allowed_words: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
         """
         Check text via 168fz API.
         
         Args:
             text: Text to analyze
+            allowed_words: Optional list of words to exclude from violations
             
         Returns:
             Dictionary with analysis results from 168fz
@@ -57,13 +58,21 @@ class FZ168Client:
         """
         url = f"{self.base_url}/api/v1/check"
         
+        payload = {"text": text}
+        if allowed_words:
+            payload["allowed_words"] = allowed_words
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Sending to 168fz: text length={len(text)}, allowed_words={allowed_words}")
+        
         for attempt in range(1, self.retry_attempts + 1):
             try:
                 timeout = aiohttp.ClientTimeout(total=self.timeout)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(
                         url,
-                        json={"text": text}
+                        json=payload
                     ) as response:
                         if response.status == 200:
                             result = await response.json()
@@ -88,12 +97,13 @@ class FZ168Client:
         # Should not reach here, but just in case
         raise Exception("All retry attempts exhausted")
     
-    async def check_url(self, url: str) -> Optional[Dict[str, Any]]:
+    async def check_url(self, url: str, allowed_words: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
         """
         Check URL via 168fz API (proxying URL for analysis).
         
         Args:
             url: URL to analyze
+            allowed_words: Optional list of words to exclude from violations
             
         Returns:
             Dictionary with analysis results from 168fz
@@ -103,13 +113,17 @@ class FZ168Client:
         """
         api_url = f"{self.base_url}/api/v1/check"
         
+        payload = {"url": url}
+        if allowed_words:
+            payload["allowed_words"] = allowed_words
+        
         for attempt in range(1, self.retry_attempts + 1):
             try:
                 timeout = aiohttp.ClientTimeout(total=self.timeout)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(
                         api_url,
-                        json={"url": url}
+                        json=payload
                     ) as response:
                         if response.status == 200:
                             result = await response.json()
