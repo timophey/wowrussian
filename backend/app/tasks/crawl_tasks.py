@@ -31,6 +31,110 @@ async def publish_update(project_id: int, event: str, data: dict):
         )
 
 
+async def publish_stats_update(project_id: int, db: AsyncSession):
+    """Compute and publish current project stats to avoid separate GET request."""
+    # Count pages by status
+    status_counts_result = await db.execute(
+        select(Page.status, func.count(Page.id))
+        .where(Page.project_id == project_id)
+        .group_by(Page.status)
+    )
+    status_dist = {status.value: count for status, count in status_counts_result.all()}
+    total_pages = sum(status_dist.values())
+    
+    # Count foreign words
+    total_foreign_words = await safe_scalar(
+        db,
+        select(func.sum(Page.foreign_words_count)).where(Page.project_id == project_id)
+    ) or 0
+    
+    # Count unique foreign words
+    unique_foreign_words = await safe_scalar(
+        db,
+        select(func.count(func.distinct(ForeignWord.word)))
+        .select_from(ForeignWord)
+        .join(Page)
+        .where(Page.project_id == project_id)
+    ) or 0
+    
+    # Count queue items
+    pending_queue = await safe_scalar(
+        db,
+        select(func.count()).select_from(CrawlQueue).where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status == QueueStatus.PENDING
+        )
+    ) or 0
+    
+    processing_queue = await safe_scalar(
+        db,
+        select(func.count()).select_from(CrawlQueue).where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status == QueueStatus.PROCESSING
+        )
+    ) or 0
+    
+    # Get top foreign words
+    top_words_result = await db.execute(
+        select(ForeignWord.word, func.sum(ForeignWord.count).label("total_count"))
+        .join(Page)
+        .where(Page.project_id == project_id)
+        .group_by(ForeignWord.word)
+        .order_by(func.sum(ForeignWord.count).desc())
+        .limit(20)
+    )
+    top_foreign_words = [
+        {"word": word, "count": count}
+        for word, count in top_words_result.all()
+    ]
+    
+    # Calculate totals
+    total_words = await safe_scalar(
+        db,
+        select(func.sum(Page.words_count)).where(Page.project_id == project_id)
+    ) or 0
+    
+    foreign_percentage = (total_foreign_words / total_words * 100) if total_words > 0 else 0
+    avg_words = total_words / total_pages if total_pages > 0 else 0
+    avg_foreign = total_foreign_words / total_pages if total_pages > 0 else 0
+    
+    # Compute violations and risk level from pages with fz168_summary
+    risk_level_distribution = {"high": 0, "medium": 0, "low": 0}
+    total_violations = 0
+    
+    pages_result = await db.execute(
+        select(Page.fz168_summary).where(
+            Page.project_id == project_id,
+            Page.fz168_summary.isnot(None)
+        )
+    )
+    for (summary,) in pages_result.all():
+        if summary and isinstance(summary, dict):
+            risk_level = summary.get('risk_level', 'low')
+            if risk_level in risk_level_distribution:
+                risk_level_distribution[risk_level] += 1
+            total_violations += summary.get('violation_count', 0)
+    
+    stats = {
+        "project_id": project_id,
+        "total_pages": total_pages,
+        "status_distribution": status_dist,
+        "total_words": total_words,
+        "total_foreign_words": total_foreign_words,
+        "unique_foreign_words": unique_foreign_words,
+        "foreign_percentage": foreign_percentage,
+        "average_words_per_page": round(avg_words, 2),
+        "average_foreign_per_page": round(avg_foreign, 2),
+        "top_foreign_words": top_foreign_words,
+        "queue_pending": pending_queue,
+        "queue_processing": processing_queue,
+        "risk_level_distribution": risk_level_distribution,
+        "total_violations": total_violations
+    }
+    
+    await publish_update(project_id, "stats_update", stats)
+
+
 async def is_project_stopped(project_id: int) -> bool:
     """Check if project has been marked as stopped (via Redis for fast access)."""
     try:
@@ -204,9 +308,17 @@ async def _analyze_page_in_session(db: AsyncSession, page: Page, project: Projec
             "page_id": page.id,
             "url": page.url,
             "words_count": page.words_count,
-            "foreign_words_count": page.foreign_words_count
+            "foreign_words_count": page.foreign_words_count,
+            "fz168_summary": page.fz168_summary,
+            "fz168_statistics": page.fz168_statistics,
+            "fz168_checks": page.fz168_checks,
+            "fz168_dictionaries": page.fz168_dictionaries,
+            "fz168_raw_response": page.fz168_raw_response
         }
     )
+    
+    # Publish stats update
+    await publish_stats_update(page.project_id, db)
     
     # Check if project is complete
     await _check_project_completion(page.project_id, db)
@@ -240,6 +352,8 @@ async def _crawl_project_async(project_id: int, task_id: str):
                     # Check if project was stopped (using Redis for fast access)
                     if await is_project_stopped(project_id):
                         await publish_update(project_id, "stopped", {"message": "Project stopped"})
+                        # Publish stats before returning
+                        await publish_stats_update(project_id, db)
                         # Update DB status as well
                         project = await safe_scalar(db, select(Project).where(Project.id == project_id))
                         if project:
@@ -297,6 +411,8 @@ async def _crawl_project_async(project_id: int, task_id: str):
                                 "page_crawled",
                                 {"page_id": page.id, "url": page.url}
                             )
+                            # Publish stats update after page crawled
+                            await publish_stats_update(project_id, db)
                         except Exception as e:
                             print(f"Failed to publish page_crawled event: {e}")
                         
@@ -352,6 +468,9 @@ async def _crawl_project_async(project_id: int, task_id: str):
             
             # Check if all pages are processed
             await _check_project_completion(project_id, db)
+            
+            # Publish final stats when crawling is complete
+            await publish_stats_update(project_id, db)
             
         except Exception as e:
             await publish_update(project_id, "error", {"message": str(e)})

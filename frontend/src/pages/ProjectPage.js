@@ -204,7 +204,8 @@ function ProjectPage() {
     currentIdRef.current = id;
   }, [id]);
 
-  const fetchProject = useCallback(async () => {
+  // Full fetch for initial load - fetches everything
+  const fetchProjectFull = useCallback(async () => {
     if (fetchInProgress.current) {
       return; // Prevent concurrent fetches
     }
@@ -239,10 +240,35 @@ function ProjectPage() {
     }
   }, [id, sortBy, sortOrder, t, isAuthenticated]);
 
+  // Lightweight fetch for pages only - stats come via WebSocket
+  const fetchPagesOnly = useCallback(async () => {
+    if (fetchInProgress.current) {
+      return; // Prevent concurrent fetches
+    }
+
+    fetchInProgress.current = true;
+    try {
+      const guestToken = !isAuthenticated ? localStorage.getItem('guest_session_token') : null;
+      const pagesRes = await pageApi.list(id, { sort_by: sortBy, sort_order: sortOrder, guest_session_token: guestToken });
+      // Only update state if this is still the current project
+      if (mountedRef.current && currentIdRef.current === id) {
+        setPages(pagesRes.data);
+        setError(''); // Clear any previous errors on success
+      }
+    } catch (err) {
+      if (mountedRef.current && currentIdRef.current === id) {
+        setError(err.response?.data?.detail || t('errors.failedToLoad'));
+      }
+    } finally {
+      fetchInProgress.current = false;
+    }
+  }, [id, sortBy, sortOrder, isAuthenticated]);
+
+  // Initial full fetch on mount or when sort changes
   useEffect(() => {
     setLoading(true);
-    fetchProject();
-  }, [fetchProject]);
+    fetchProjectFull();
+  }, [fetchProjectFull]);
 
   // Handle WebSocket messages with incremental updates
   useEffect(() => {
@@ -284,25 +310,30 @@ function ProjectPage() {
              words_count: 0
            }];
          });
-         // Update stats incrementally
-         setStats(prev => prev ? {
-           ...prev,
-           total_pages: prev.total_pages + 1
-         } : null);
        }
        else if (lastMessage.event === 'page_analyzed') {
-         const { page_id, url, words_count, foreign_words_count } = lastMessage.data;
-         // Update page with analysis results
+         const { page_id, url, words_count, foreign_words_count, fz168_summary, fz168_statistics, fz168_checks, fz168_dictionaries, fz168_raw_response } = lastMessage.data;
+         // Update page with analysis results including fz168 data for violations display
          setPages(prev => prev.map(page =>
            page.id === page_id
-             ? { ...page, status: 'analyzed', words_count, foreign_words_count }
+             ? {
+                 ...page,
+                 status: 'analyzed',
+                 words_count,
+                 foreign_words_count,
+                 fz168_summary: fz168_summary || page.fz168_summary,
+                 fz168_statistics: fz168_statistics || page.fz168_statistics,
+                 fz168_checks: fz168_checks || page.fz168_checks,
+                 fz168_dictionaries: fz168_dictionaries || page.fz168_dictionaries,
+                 fz168_raw_response: fz168_raw_response || page.fz168_raw_response
+               }
              : page
          ));
-         // Update stats
-         setStats(prev => prev ? {
-           ...prev,
-           total_foreign_words: (prev.total_foreign_words || 0) + foreign_words_count
-         } : null);
+       }
+       else if (lastMessage.event === 'stats_update') {
+         // Handle comprehensive stats update from WebSocket
+         const statsData = lastMessage.data;
+         setStats(statsData);
        }
        else if (lastMessage.event === 'project_completed') {
          setProject(prev => prev ? { ...prev, status: 'completed' } : null);
@@ -343,19 +374,15 @@ function ProjectPage() {
         }
      }
 
-    // Debounce a full sync to ensure consistency (500ms after last message)
-    debounceTimer.current = setTimeout(() => {
-      if (mountedRef.current && currentIdRef.current === id) {
-        fetchProject();
-      }
-    }, 500);
+    // No longer need debounced fetchProject - stats come via WebSocket
+    // Only fetch on initial load or when sort changes
 
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [messages, fetchProject, id]);
+  }, [messages, id]);
 
   // Cleanup on unmount
   useEffect(() => {
