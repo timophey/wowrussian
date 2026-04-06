@@ -95,12 +95,19 @@ function Header() {
       data-block="header"
       sx={{
         position: 'fixed',
-        top: 16,
-        right: 16,
+        top: 0,
+        left: 0,
+        right: 0,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'flex-end',
         gap: 1,
-        zIndex: 1000,
+        padding: '8px 16px',
+        bgcolor: 'background.paper',
+        borderBottom: 1,
+        borderColor: 'divider',
+        zIndex: 1100,
+        boxShadow: 1,
       }}
     >
       {/* Language Switcher */}
@@ -252,7 +259,7 @@ function App() {
           minHeight: '100vh',
         }}
       >
-        <Container data-block="main-container" maxWidth="lg" sx={{ mt: 4, flex: 1, pb: 8 }}>
+        <Container data-block="main-container" maxWidth="lg" sx={{ mt: 8, flex: 1, pb: 8 }}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
