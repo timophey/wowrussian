@@ -88,7 +88,10 @@
       "high": "High",
       "medium": "Medium",
       "low": "Low"
-    }
+    },
+    "uniqueForeignWords": "Unique Foreign Words",
+    "noUniqueWords": "No unique foreign words found.",
+    "noPages": "No pages found."
   },
  "violationsDialog": {
    "title": "Violations Details",

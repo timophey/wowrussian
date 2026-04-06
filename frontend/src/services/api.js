@@ -136,6 +136,10 @@ export const statsApi = {
     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
     return api.get(`/stats/${projectId}`, { params });
   },
+  getUniqueForeignWords: (projectId, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.get(`/stats/${projectId}/unique-foreign-words`, { params });
+  },
 };
 
 // Auth API

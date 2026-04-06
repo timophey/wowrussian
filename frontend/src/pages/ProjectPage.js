@@ -26,8 +26,12 @@ import {
   DialogActions,
   TableSortLabel,
   LinearProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Link,
 } from '@mui/material';
-import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload } from '@mui/icons-material';
+import { Visibility, Stop, ArrowBack, PlayArrow, Delete, FileDownload, ExpandMore } from '@mui/icons-material';
 import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
@@ -77,6 +81,9 @@ function ProjectPage() {
   const [pageDetailSource, setPageDetailSource] = useState(null); // 'pages' | 'violations' | null
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [uniqueWordsDialogOpen, setUniqueWordsDialogOpen] = useState(false);
+  const [uniqueForeignWords, setUniqueForeignWords] = useState([]);
+  const [uniqueWordsLoading, setUniqueWordsLoading] = useState(false);
 
   const { messages, isConnected } = useWebSocket(id);
 
@@ -469,6 +476,21 @@ function ProjectPage() {
     }
   };
 
+  const handleOpenUniqueWordsDialog = async () => {
+    setUniqueWordsLoading(true);
+    try {
+      const guestToken = getGuestToken();
+      const res = await statsApi.getUniqueForeignWords(id, guestToken);
+      setUniqueForeignWords(res.data.words || []);
+    } catch (err) {
+      console.error('Failed to fetch unique foreign words:', err);
+      setError(t('errors.failedToLoad'));
+    } finally {
+      setUniqueWordsLoading(false);
+    }
+    setUniqueWordsDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -520,7 +542,19 @@ function ProjectPage() {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card data-block="stat-card-foreign-words-combined" sx={{ height: '100%' }}>
+            <Card
+              data-block="stat-card-foreign-words-combined"
+              sx={{
+                height: '100%',
+                cursor: uniqueWordsLoading ? 'default' : 'pointer',
+                '&:hover': uniqueWordsLoading ? {} : {
+                  bgcolor: 'action.hover'
+                },
+                opacity: uniqueWordsLoading ? 0.7 : 1,
+                position: 'relative'
+              }}
+              onClick={uniqueWordsLoading ? undefined : handleOpenUniqueWordsDialog}
+            >
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
                   {t('project.foreignWords')}
@@ -529,6 +563,23 @@ function ProjectPage() {
                 <Typography variant="body2" color="text.secondary">
                   {t('project.unique')}: {stats.unique_foreign_words}
                 </Typography>
+                {uniqueWordsLoading && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'rgba(255, 255, 255, 0.7)'
+                    }}
+                  >
+                    <CircularProgress size={24} />
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -961,6 +1012,91 @@ function ProjectPage() {
                </Button>
              </>
            )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Unique Foreign Words Dialog */}
+      <Dialog
+        open={uniqueWordsDialogOpen}
+        onClose={() => setUniqueWordsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {t('project.uniqueForeignWords', 'Unique Foreign Words')} ({uniqueForeignWords.length})
+        </DialogTitle>
+        <DialogContent>
+          {uniqueWordsLoading ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : uniqueForeignWords.length === 0 ? (
+            <Alert severity="info">
+              {t('project.noUniqueWords', 'No unique foreign words found.')}
+            </Alert>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('single.word', 'Word')}</TableCell>
+                    <TableCell align="right">{t('single.count', 'Count')}</TableCell>
+                    <TableCell>{t('project.pages', 'Pages')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {uniqueForeignWords.map((wordData, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Accordion>
+                          <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography>{wordData.word}</Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            {wordData.pages && wordData.pages.length > 0 ? (
+                              <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                                {wordData.pages.map((page, pageIndex) => (
+                                  <Box component="li" key={pageIndex} sx={{ mb: 0.5 }}>
+                                    <Link
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleViewPage({ id: page.id, project_id: id, url: page.url });
+                                      }}
+                                      underline="hover"
+                                    >
+                                      {page.url}
+                                    </Link>
+                                  </Box>
+                                ))}
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                {t('project.noPages', 'No pages found.')}
+                              </Typography>
+                            )}
+                          </AccordionDetails>
+                        </Accordion>
+                      </TableCell>
+                      <TableCell align="right">{wordData.total_count}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={wordData.pages?.length || 0}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUniqueWordsDialogOpen(false)}>
+            {t('dialogs.close')}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
