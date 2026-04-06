@@ -3,13 +3,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.user import User
+from app.models.project import Project
+from app.models.page import Page
+from app.models.foreign_word import ForeignWord
+from app.models.russian_word import RussianWord
+from app.models.guest_session import GuestSession
+from app.models.export_job import ExportJob
 from app.schemas.user import UserCreate, User as UserSchema, Token, UserLogin
 from app.utils.db import safe_scalar
 
@@ -166,3 +172,90 @@ async def get_optional_user(
         return await get_current_user(token, db)
     except HTTPException:
         return None
+
+
+@router.post("/me/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete current user's account and all associated data.
+    
+    This endpoint implements the right to erasure (right to be forgotten)
+    as required by 152-FZ Article 21 and GDPR Article 17.
+    """
+    # Delete all associated projects (cascade will handle related data)
+    await db.execute(
+        delete(Project).where(Project.owner_id == current_user.id)
+    )
+    
+    # Delete export jobs
+    await db.execute(
+        delete(ExportJob).where(ExportJob.owner_id == current_user.id)
+    )
+    
+    # Delete the user
+    await db.execute(delete(User).where(User.id == current_user.id))
+    await db.commit()
+    
+    return None
+
+
+@router.post("/guest/delete-session", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_guest_session(
+    session_token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete guest session and all associated data.
+    
+    This endpoint implements the right to erasure for guest users.
+    """
+    # Find the guest session
+    result = await db.execute(
+        select(GuestSession).where(GuestSession.session_token == session_token)
+    )
+    guest_session = result.scalar_one_or_none()
+    
+    if not guest_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Guest session not found"
+        )
+    
+    # Delete all associated projects (cascade will handle related data)
+    await db.execute(
+        delete(Project).where(Project.guest_session_id == guest_session.id)
+    )
+    
+    # Delete the guest session
+    await db.execute(delete(GuestSession).where(GuestSession.id == guest_session.id))
+    await db.commit()
+    
+    return None
+
+
+@router.get("/legal-info")
+async def get_legal_info():
+    """Get legal information about the data operator.
+    
+    This endpoint provides information required by 152-FZ Article 18.1
+    about the personal data operator.
+    """
+    # Build operator info - only include non-empty fields
+    operator_info = {}
+    if settings.operator_name:
+        operator_info["name"] = settings.operator_name
+    if settings.operator_inn:
+        operator_info["inn"] = settings.operator_inn
+    if settings.operator_ogrn:
+        operator_info["ogrn"] = settings.operator_ogrn
+    if settings.operator_address:
+        operator_info["address"] = settings.operator_address
+    if settings.operator_email:
+        operator_info["email"] = settings.operator_email
+    
+    return {
+        "operator": operator_info,
+        "privacy_policy_url": "/privacy-policy",
+        "law_reference": "Federal Law No. 152-FZ dated July 27, 2006 'On Personal Data'"
+    }

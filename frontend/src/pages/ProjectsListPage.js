@@ -24,6 +24,7 @@ import {
   DialogActions,
   TextField,
   AlertTitle,
+  Link,
 } from '@mui/material';
 import { Visibility, Delete, Add, Person, ArrowBack } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,6 +57,7 @@ function ProjectsListPage() {
   const [authSuccess, setAuthSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
   const [viewingUserId, setViewingUserId] = useState(null);
 
   // Check if we're viewing projects for a specific user (from admin panel)
@@ -159,6 +161,13 @@ function ProjectsListPage() {
     e.preventDefault();
     setAuthError('');
     setAuthSuccess('');
+    
+    // Check consent for registration
+    if (authMode === 'register' && !consentGiven) {
+      setAuthError(t('home.consentRequired'));
+      return;
+    }
+    
     setAuthLoading(true);
 
     try {
@@ -200,6 +209,7 @@ function ProjectsListPage() {
     setAuthSuccess('');
     setEmail('');
     setPassword('');
+    setConsentGiven(false);
   };
 
   if (loading) {
@@ -264,6 +274,23 @@ function ProjectsListPage() {
                  required
                  inputProps={{ minLength: 8 }}
                />
+               {authMode === 'register' && (
+                 <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 1, mb: 1 }}>
+                   <input
+                     type="checkbox"
+                     id="consent-checkbox-projects"
+                     checked={consentGiven}
+                     onChange={(e) => setConsentGiven(e.target.checked)}
+                     style={{ marginTop: 8, marginRight: 8 }}
+                   />
+                   <label htmlFor="consent-checkbox-projects" style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>
+                     {t('home.consentText')}{' '}
+                     <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                       {t('home.privacyPolicyLink')}
+                     </Link>
+                   </label>
+                 </Box>
+               )}
                {authSuccess && (
                  <Alert severity="success" sx={{ mt: 2 }}>
                    {authSuccess}

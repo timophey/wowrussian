@@ -12,6 +12,7 @@ A web application for analyzing websites to detect foreign words and anglicisms.
 - View detailed statistics and word frequency
 - Multi-user support with isolated storage
 - **Graceful degradation** - falls back to local analysis if 168fz is unavailable
+- **152-FZ Compliance** - Full compliance with Russian Federal Law "On Personal Data" (see below)
 
 ## Tech Stack
 
@@ -374,3 +375,54 @@ git submodule update --init --recursive
 ```
 
 Or use the provided deployment scripts which handle submodules automatically.
+
+---
+
+## 🔒 152-FZ Compliance (Russian Federal Law "On Personal Data")
+
+This application is designed to comply with Federal Law No. 152-FZ "On Personal Data". The following measures have been implemented:
+
+### Implemented Compliance Features
+
+| Feature | Description |
+|---------|-------------|
+| **Privacy Policy** | Available at `/privacy-policy` page |
+| **Cookie Consent** | Banner displayed on first visit with Accept/Decline options |
+| **Data Processing Consent** | Checkbox required during registration |
+| **Right to Erasure** | Users can delete their accounts and associated data |
+| **Operator Information** | Displayed in footer and available via `/api/auth/legal-info` |
+
+### Personal Data Collected
+
+- Email address (for authentication)
+- Password hash (bcrypt, never stored in plain text)
+- IP address (for guest sessions)
+- Browser User-Agent (for guest sessions)
+- Session data
+- Website analysis data (URLs, page content)
+
+### API Endpoints for Data Rights
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/me/delete-account` | Delete authenticated user's account |
+| `POST` | `/api/auth/guest/delete-session` | Delete guest session and data |
+| `GET` | `/api/auth/legal-info` | Get operator legal information |
+
+### Database Migration
+
+Run the following command to apply the latest migration for 152-FZ compliance:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+### Configuration for Production
+
+For production deployment, ensure you:
+
+1. Update operator information in [`Footer.js`](frontend/src/components/Footer.js) and [`auth.py`](backend/app/api/auth.py)
+2. Set proper privacy policy URL
+3. Configure HTTPS for secure data transmission
+4. Review and update the privacy policy content in [`PrivacyPolicyPage.js`](frontend/src/pages/PrivacyPolicyPage.js)

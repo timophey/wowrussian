@@ -23,7 +23,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     guest_session_id = Column(Integer, ForeignKey("guest_sessions.id"), nullable=True)
     domain = Column(String, nullable=False, index=True)
     base_url = Column(String, nullable=False)

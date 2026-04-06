@@ -12,6 +12,50 @@ Currently, authentication is not fully implemented. All endpoints are accessible
 
 In production, JWT tokens will be required via `Authorization: Bearer <token>` header.
 
+## 152-FZ Compliance Endpoints
+
+These endpoints are implemented to comply with Russian Federal Law No. 152-FZ "On Personal Data".
+
+### Delete User Account
+
+Deletes the current user's account and all associated data (projects, pages, words, export jobs).
+
+```http
+POST /auth/me/delete-account
+Authorization: Bearer <token>
+```
+
+**Response:** `204 No Content`
+
+### Delete Guest Session
+
+Deletes a guest session and all associated data.
+
+```http
+POST /auth/guest/delete-session?session_token=<token>
+```
+
+**Response:** `204 No Content`
+
+### Get Legal Information
+
+Returns information about the personal data operator as required by 152-FZ Article 18.1.
+
+```http
+GET /auth/legal-info
+```
+
+**Response:**
+```json
+{
+  "operator_name": "WowRussian Analyzer",
+  "operator_address": "Russia, Moscow",
+  "contact_email": "privacy@wowrussian.ru",
+  "privacy_policy_url": "/privacy-policy",
+  "law_reference": "Federal Law No. 152-FZ dated July 27, 2006 'On Personal Data'"
+}
+```
+
 ## Endpoints
 
 ### Projects

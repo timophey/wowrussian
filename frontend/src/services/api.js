@@ -149,6 +149,7 @@ export const authApi = {
   logout: () => {
     setAuthToken(null);
   },
+  deleteAccount: () => api.post('/auth/me/delete-account'),
 };
 
 // Admin API
@@ -162,6 +163,7 @@ export const adminApi = {
 export const guestApi = {
   createSession: () => api.post('/guest/sessions'),
   validateSession: (token) => api.get(`/guest/sessions/${token}`),
+  deleteSession: (token) => api.post('/auth/guest/delete-session', null, { params: { session_token: token } }),
 };
 
 // Single Analysis API

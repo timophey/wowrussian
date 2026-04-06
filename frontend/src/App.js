@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Container, Box, IconButton, Typography, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, CircularProgress, Divider } from '@mui/material';
-import { Visibility, Person, Logout, Language as LanguageIcon } from '@mui/icons-material';
+import { Container, Box, IconButton, Typography, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, CircularProgress, Divider, Link } from '@mui/material';
+import { Visibility, Person, Logout, Language as LanguageIcon, DeleteForever as DeleteForeverIcon } from '@mui/icons-material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomePage from './pages/HomePage';
 import ProjectPage from './pages/ProjectPage';
@@ -9,6 +9,11 @@ import ProjectsListPage from './pages/ProjectsListPage';
 import PageDetailPage from './pages/PageDetailPage';
 import SinglePage from './pages/SinglePage';
 import AdminPage from './pages/AdminPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import LegalInfoPage from './pages/LegalInfoPage';
+import Footer from './components/Footer';
+import CookieConsentBanner from './components/CookieConsentBanner';
+import DataDeletionDialog from './components/DataDeletionDialog';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from './services/api';
@@ -26,6 +31,8 @@ function Header() {
   const [authSuccess, setAuthSuccess] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [consentGiven, setConsentGiven] = React.useState(false);
+  const [dataDeletionOpen, setDataDeletionOpen] = React.useState(false);
 
   const handleLogout = () => {
     logout();
@@ -35,14 +42,23 @@ function Header() {
     setAuthMode(mode);
     setAuthDialogOpen(true);
     setAuthError('');
+    setAuthSuccess('');
     setEmail('');
     setPassword('');
+    setConsentGiven(false);
   };
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
     setAuthSuccess('');
+    
+    // Check consent for registration
+    if (authMode === 'register' && !consentGiven) {
+      setAuthError(t('home.consentRequired'));
+      return;
+    }
+    
     setAuthLoading(true);
 
     try {
@@ -117,6 +133,11 @@ function Header() {
           <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
             {t('home.loggedInAs')}: {user.email}
           </Typography>
+          <Tooltip title={t('dataDeletion.button')}>
+            <IconButton size="small" onClick={() => setDataDeletionOpen(true)} color="error">
+              <DeleteForeverIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t('home.logout')}>
             <IconButton size="small" onClick={handleLogout}>
               <Logout />
@@ -162,6 +183,23 @@ function Header() {
               sx={{ mb: 2 }}
               required
             />
+            {authMode === 'register' && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 1, mb: 1 }}>
+                <input
+                  type="checkbox"
+                  id="consent-checkbox"
+                  checked={consentGiven}
+                  onChange={(e) => setConsentGiven(e.target.checked)}
+                  style={{ marginTop: 8, marginRight: 8 }}
+                />
+                <label htmlFor="consent-checkbox" style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>
+                  {t('home.consentText')}{' '}
+                  <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                    {t('home.privacyPolicyLink')}
+                  </Link>
+                </label>
+              </Box>
+            )}
             <TextField
               margin="dense"
               label={t('home.password')}
@@ -200,6 +238,13 @@ function Header() {
           </Button>
         </Box>
       </Dialog>
+
+      {/* Data Deletion Dialog */}
+      <DataDeletionDialog
+        open={dataDeletionOpen}
+        onClose={() => setDataDeletionOpen(false)}
+        isGuest={false}
+      />
     </Box>
   );
 }
@@ -208,17 +253,29 @@ function App() {
   return (
     <AuthProvider>
       <Header />
-      <Container data-block="main-container" maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/projects" element={<ProjectsListPage />} />
-          <Route path="/project/:id" element={<ProjectPage />} />
-          <Route path="/project/:projectId/page/:pageId" element={<PageDetailPage />} />
-          <Route path="/single" element={<SinglePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Container>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+        }}
+      >
+        <Container data-block="main-container" maxWidth="lg" sx={{ mt: 4, flex: 1, pb: 8 }}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/projects" element={<ProjectsListPage />} />
+            <Route path="/project/:id" element={<ProjectPage />} />
+            <Route path="/project/:projectId/page/:pageId" element={<PageDetailPage />} />
+            <Route path="/single" element={<SinglePage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/legal-info" element={<LegalInfoPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Container>
+        <Footer />
+        <CookieConsentBanner />
+      </Box>
     </AuthProvider>
   );
 }

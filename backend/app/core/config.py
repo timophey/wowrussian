@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     fz168_timeout: int = Field(default=60, env="FZ168_TIMEOUT")  # Increased from 10 to 60 seconds
     fz168_retry_attempts: int = Field(default=3, env="FZ168_RETRY_ATTEMPTS")
 
+    # Operator info (for 152-FZ compliance)
+    operator_name: str = Field(default="", env="OPERATOR_NAME")
+    operator_inn: str = Field(default="", env="OPERATOR_INN")
+    operator_ogrn: str = Field(default="", env="OPERATOR_OGRN")
+    operator_address: str = Field(default="", env="OPERATOR_ADDRESS")
+    operator_email: str = Field(default="", env="OPERATOR_EMAIL")
+
     class Config:
         env_file = ".env"
         case_sensitive = False

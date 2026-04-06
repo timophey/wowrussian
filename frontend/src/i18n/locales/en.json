@@ -24,7 +24,10 @@
     "password": "Password",
     "noAccount": "Don't have an account? Register",
     "haveAccount": "Already have an account? Login",
-    "registrationSuccess": "Registration successful! You can now log in with your credentials."
+    "registrationSuccess": "Registration successful! You can now log in with your credentials.",
+    "consentText": "I consent to the processing of my personal data in accordance with the",
+    "privacyPolicyLink": "Privacy Policy",
+    "consentRequired": "You must consent to personal data processing to register"
   },
   "projects": {
     "title": "Projects",
@@ -271,5 +274,144 @@
         "exportDialogTitle": "Export to XLSX",
         "exportDialogDescription": "Select word statuses to export",
         "exportButton": "Export"
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "lastUpdated": "Last Updated",
+        "general": {
+          "title": "General Provisions",
+          "content": "This Privacy Policy defines the procedure for processing and protecting personal data of WowRussian Analyzer service users. The Operator ensures protection of processed personal data from unauthorized access and disclosure in accordance with Federal Law No. 152-FZ dated July 27, 2006 'On Personal Data'."
+        },
+        "operator": {
+          "title": "Personal Data Operator",
+          "content": "The personal data operator is the administration of WowRussian Analyzer service. Contact address: privacy@wowrussian.ru"
+        },
+        "collectedData": {
+          "title": "Collected Personal Data",
+          "content": "We collect and process the following categories of personal data:",
+          "items": {
+            "email": "Email address",
+            "password": "Password hash (we do not store passwords in plain text)",
+            "ipAddress": "IP address (for guest sessions)",
+            "userAgent": "Browser User-Agent (for guest sessions)",
+            "sessionData": "Session data",
+            "analysisData": "Website analysis data (URLs, page content)"
+          }
+        },
+        "purposes": {
+          "title": "Data Processing Purposes",
+          "content": "Personal data is processed for the following purposes:",
+          "items": {
+            "authentication": "Authentication and service access",
+            "serviceProvision": "Provision of website analysis services",
+            "improvement": "Service quality improvement",
+            "security": "Security assurance and fraud prevention"
+          }
+        },
+        "legalBasis": {
+          "title": "Legal Basis for Processing",
+          "content": "Personal data processing is carried out based on:",
+          "items": {
+            "consent": "Consent of the personal data subject (upon registration)",
+            "contract": "Necessity of contract performance (user agreement)",
+            "legitimateInterest": "Legitimate interest of the operator (service improvement, security)"
+          }
+        },
+        "storage": {
+          "title": "Storage Periods",
+          "content": "Personal data is stored no longer than necessary for the purposes of its processing, unless otherwise established by the legislation of the Russian Federation. Users may request deletion of their data at any time."
+        },
+        "rights": {
+          "title": "Rights of the Personal Data Subject",
+          "content": "In accordance with Federal Law No. 152-FZ, you have the right to:",
+          "items": {
+            "access": "Access to your personal data",
+            "correction": "Correction of inaccurate data",
+            "deletion": "Deletion of personal data",
+            "restriction": "Restriction of data processing",
+            "portability": "Data portability",
+            "objection": "Objection to processing",
+            "complaint": "File a complaint with Roskomnadzor to protect your rights"
+          }
+        },
+        "cookies": {
+          "title": "Use of Cookies",
+          "content": "We use cookies to ensure service functionality, authentication, and website usage analysis. By continuing to use the website, you consent to the use of cookies."
+        },
+        "thirdParty": {
+          "title": "Transfer to Third Parties",
+          "content": "We do not transfer your personal data to third parties, except as provided by the legislation of the Russian Federation or necessary for service provision (e.g., to hosting providers)."
+        },
+        "security": {
+          "title": "Data Security",
+          "content": "We take necessary organizational and technical measures to protect personal data from unauthorized access, loss, alteration, blocking, copying, and distribution."
+        },
+        "changes": {
+          "title": "Changes to the Policy",
+          "content": "We reserve the right to make changes to this Privacy Policy. The current version is always available on this page."
+        },
+        "contact": {
+          "title": "Contact Information",
+          "content": "For any questions regarding personal data processing, you can contact us at:",
+          "email": "Email"
+        }
+      },
+      "footer": {
+        "copyright": "WowRussian Analyzer. All rights reserved.",
+        "legalInfo": "Legal Information"
+      },
+      "cookieConsent": {
+        "message": "We use cookies to ensure website functionality and improve service quality. By continuing to use the website, you consent to the use of cookies.",
+        "learnMore": "Learn more in the Privacy Policy",
+        "accept": "Accept",
+        "decline": "Decline"
+      },
+      "dataDeletion": {
+        "title": "Data Deletion Request",
+        "description": "You can request deletion of your personal data. This action is irreversible.",
+        "confirmMessage": "Are you sure you want to delete all your personal data? This action cannot be undone.",
+        "success": "Data deletion request sent",
+        "error": "Failed to send data deletion request",
+        "button": "Delete My Data"
+      },
+      "legalInfo": {
+        "title": "Legal Information",
+        "operator": {
+          "title": "Operator Information",
+          "name": "Name",
+          "address": "Address",
+          "inn": "TIN",
+          "ogrn": "OGRN",
+          "email": "Email"
+        },
+        "disclaimer": {
+          "title": "Disclaimer",
+          "asIs": {
+            "title": "Service Provided 'As Is'",
+            "content": "The service is provided without warranties of uninterrupted operation, security, or accuracy of results. We do not guarantee complete accuracy of foreign word detection and full compliance with all legislative requirements."
+          },
+          "notLegalAdvice": {
+            "title": "Not Legal Advice",
+            "content": "The results of 168-FZ analysis are for informational purposes only and do not constitute a legal opinion. For official questions related to legal compliance, consult qualified legal professionals."
+          },
+          "limitation": {
+            "title": "Limitation of Liability",
+            "content": "The operator is not liable for decisions made based on the service analysis results. Use of the service is at your own risk."
+          },
+          "dataPurpose": {
+            "title": "Purpose of Personal Data Collection",
+            "content": "Personal data is collected exclusively for the functioning of the service (authentication, project storage). Data is not sold or transferred to third parties, except as provided by the legislation of the Russian Federation."
+          },
+          "cookies": {
+            "title": "Cookies and Analytics",
+            "content": "We use cookies to ensure service functionality, authentication, and website usage analysis. You can manage cookie settings in your browser."
+          }
+        },
+        "lawReference": {
+          "title": "Legal Framework",
+          "content": "Personal data processing is carried out in accordance with Federal Law No. 152-FZ dated July 27, 2006 'On Personal Data'."
+        },
+        "privacyPolicy": "Privacy Policy",
+        "privacyPolicyLink": "See also"
       }
-   }
+    }
