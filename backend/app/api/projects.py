@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete, asc, desc
+from sqlalchemy import select, func, delete, asc, desc, update as sa_update
 import redis.asyncio as redis
 import logging
 from pathlib import Path
@@ -832,7 +832,7 @@ async def resume_project(
     
     # Reset any pending/processing queue items to pending (they were interrupted)
     await db.execute(
-        update(CrawlQueue)
+        sa_update(CrawlQueue)
         .where(
             CrawlQueue.project_id == project_id,
             CrawlQueue.status.in_([QueueStatus.PROCESSING])
