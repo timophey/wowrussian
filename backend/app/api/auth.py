@@ -9,14 +9,14 @@ from passlib.context import CryptContext
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.project import Project
 from app.models.page import Page
 from app.models.foreign_word import ForeignWord
 from app.models.russian_word import RussianWord
 from app.models.guest_session import GuestSession
 from app.models.export_job import ExportJob
-from app.schemas.user import UserCreate, User as UserSchema, Token, UserLogin
+from app.schemas.user import UserCreate, User as UserSchema, Token, UserLogin, PasswordChange
 from app.utils.db import safe_scalar
 
 # Password hashing context
@@ -128,15 +128,6 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserSchema)
-async def get_current_user_endpoint(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: AsyncSession = Depends(get_db)
-):
-    """Get current user information."""
-    return await get_current_user(token, db)
-
-
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db)
@@ -159,6 +150,51 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_current_admin(
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    """Get current user and verify they have admin role."""
+    user_role = current_user.role
+    if isinstance(user_role, UserRole):
+        user_role = user_role.value
+    
+    if user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
+
+
+@router.get("/me", response_model=UserSchema)
+async def get_current_user_endpoint(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user information."""
+    return current_user
+
+
+@router.post("/me/change-password", status_code=status.HTTP_200_OK)
+async def change_my_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Change current user's password."""
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password"
+        )
+    
+    # Hash and set new password
+    current_user.password_hash = get_password_hash(password_data.new_password)
+    await db.commit()
+    
+    return {"message": "Password changed successfully"}
 
 
 async def get_optional_user(
@@ -186,12 +222,12 @@ async def delete_my_account(
     """
     # Delete all associated projects (cascade will handle related data)
     await db.execute(
-        delete(Project).where(Project.owner_id == current_user.id)
+        delete(Project).where(Project.user_id == current_user.id)
     )
     
     # Delete export jobs
     await db.execute(
-        delete(ExportJob).where(ExportJob.owner_id == current_user.id)
+        delete(ExportJob).where(ExportJob.user_id == current_user.id)
     )
     
     # Delete the user

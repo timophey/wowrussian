@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Container, Box, IconButton, Typography, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, CircularProgress, Divider, Link } from '@mui/material';
-import { Visibility, Person, Logout, Language as LanguageIcon, DeleteForever as DeleteForeverIcon } from '@mui/icons-material';
+import { Visibility, Person, Logout, Language as LanguageIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomePage from './pages/HomePage';
 import ProjectPage from './pages/ProjectPage';
@@ -9,11 +9,11 @@ import ProjectsListPage from './pages/ProjectsListPage';
 import PageDetailPage from './pages/PageDetailPage';
 import SinglePage from './pages/SinglePage';
 import AdminPage from './pages/AdminPage';
+import UserProfilePage from './pages/UserProfilePage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import LegalInfoPage from './pages/LegalInfoPage';
 import Footer from './components/Footer';
 import CookieConsentBanner from './components/CookieConsentBanner';
-import DataDeletionDialog from './components/DataDeletionDialog';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from './services/api';
@@ -32,7 +32,6 @@ function Header() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [consentGiven, setConsentGiven] = React.useState(false);
-  const [dataDeletionOpen, setDataDeletionOpen] = React.useState(false);
 
   const handleLogout = () => {
     logout();
@@ -133,9 +132,9 @@ function Header() {
           <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
             {t('home.loggedInAs')}: {user.email}
           </Typography>
-          <Tooltip title={t('dataDeletion.button')}>
-            <IconButton size="small" onClick={() => setDataDeletionOpen(true)} color="error">
-              <DeleteForeverIcon />
+          <Tooltip title={t('profile.title')}>
+            <IconButton size="small" onClick={() => navigate('/profile')} color="primary">
+              <SettingsIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={t('home.logout')}>
@@ -238,13 +237,6 @@ function Header() {
           </Button>
         </Box>
       </Dialog>
-
-      {/* Data Deletion Dialog */}
-      <DataDeletionDialog
-        open={dataDeletionOpen}
-        onClose={() => setDataDeletionOpen(false)}
-        isGuest={false}
-      />
     </Box>
   );
 }
@@ -264,6 +256,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
+            <Route path="/profile" element={<UserProfilePage />} />
             <Route path="/project/:id" element={<ProjectPage />} />
             <Route path="/project/:projectId/page/:pageId" element={<PageDetailPage />} />
             <Route path="/single" element={<SinglePage />} />

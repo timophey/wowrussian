@@ -43,7 +43,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip 401 handling for login and register requests - let the auth context handle these errors
+    const isAuthRequest = originalRequest.url?.includes('/auth/login') ||
+                          originalRequest.url?.includes('/auth/register');
+    
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
       // Clear token and redirect to home
       setAuthToken(null);
@@ -150,13 +154,57 @@ export const authApi = {
     setAuthToken(null);
   },
   deleteAccount: () => api.post('/auth/me/delete-account'),
+  changePassword: (currentPassword, newPassword) => api.post('/auth/me/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  }),
 };
 
 // Admin API
 export const adminApi = {
-  listUsers: (adminKey) => api.get('/admin/users', { params: { admin_key: adminKey } }),
-  createUser: (email, password, adminKey) => api.post('/admin/users', { email, password }, { params: { admin_key: adminKey } }),
-  deleteUser: (userId, adminKey) => api.delete(`/admin/users/${userId}`, { params: { admin_key: adminKey } }),
+  listUsers: (adminKey) => {
+    const token = localStorage.getItem('access_token');
+    const config = adminKey ? { params: { admin_key: adminKey } } : {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    return api.get('/admin/users', config);
+  },
+  createUser: (email, password, adminKey) => {
+    const token = localStorage.getItem('access_token');
+    const config = adminKey ? { params: { admin_key: adminKey } } : {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    return api.post('/admin/users', { email, password }, config);
+  },
+  deleteUser: (userId, adminKey) => {
+    const token = localStorage.getItem('access_token');
+    const config = adminKey ? { params: { admin_key: adminKey } } : {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    return api.delete(`/admin/users/${userId}`, config);
+  },
+  updateUserRole: (userId, role, adminKey) => {
+    const token = localStorage.getItem('access_token');
+    const config = adminKey ? { params: { admin_key: adminKey } } : {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    return api.patch(`/admin/users/${userId}/role`, { role }, config);
+  },
+  getUserProjects: (userId, adminKey) => {
+    const token = localStorage.getItem('access_token');
+    const config = adminKey ? { params: { admin_key: adminKey } } : {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    return api.get(`/admin/users/${userId}/projects`, config);
+  },
+  migrateAdminRole: (adminKey) => {
+    return api.post('/admin/migrate-admin-role', {}, { params: { admin_key: adminKey } });
+  },
 };
 
 // Guest Session API

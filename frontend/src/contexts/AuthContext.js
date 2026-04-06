@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
+import i18n from '../i18n';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +10,29 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Helper function to translate backend error messages
+const translateAuthError = (detail, fallbackKey) => {
+  if (!detail) {
+    return i18n.t(`errors.${fallbackKey}`);
+  }
+  
+  const lowerDetail = detail.toLowerCase();
+  
+  // Map backend error messages to i18n keys
+  if (lowerDetail.includes('incorrect email or password') || lowerDetail.includes('could not validate credentials')) {
+    return i18n.t('errors.invalidCredentials');
+  }
+  if (lowerDetail.includes('already registered') || lowerDetail.includes('already exists')) {
+    return i18n.t('errors.emailAlreadyExists');
+  }
+  if (lowerDetail.includes('password') && lowerDetail.includes('8')) {
+    return i18n.t('errors.weakPassword');
+  }
+  
+  // Default fallback
+  return i18n.t(`errors.${fallbackKey}`);
 };
 
 export const AuthProvider = ({ children }) => {
@@ -49,7 +73,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Login failed'
+        error: translateAuthError(error.response?.data?.detail, 'loginFailed')
       };
     }
   };
@@ -63,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Registration failed'
+        error: translateAuthError(error.response?.data?.detail, 'registrationFailed')
       };
     }
   };
