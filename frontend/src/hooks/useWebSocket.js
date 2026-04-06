@@ -4,9 +4,11 @@ export const useWebSocket = (projectId) => {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const isUnmountingRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (!projectId) return;
+    if (!projectId || isUnmountingRef.current) return;
 
     const wsUrl = `${window.location.origin.replace('http', 'ws')}/ws/projects/${projectId}`;
     const ws = new WebSocket(wsUrl);
@@ -26,8 +28,10 @@ export const useWebSocket = (projectId) => {
 
     ws.onclose = () => {
       setIsConnected(false);
-      // Try to reconnect after 3 seconds
-      setTimeout(connect, 3000);
+      // Only reconnect if not unmounting
+      if (!isUnmountingRef.current) {
+        reconnectTimerRef.current = setTimeout(connect, 3000);
+      }
     };
 
     ws.onerror = (error) => {
@@ -41,8 +45,19 @@ export const useWebSocket = (projectId) => {
     connect();
 
     return () => {
+      // Mark as unmounting to prevent reconnect
+      isUnmountingRef.current = true;
+      
+      // Clear any pending reconnect timer
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      
+      // Close the WebSocket connection
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);

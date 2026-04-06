@@ -46,20 +46,30 @@ async def websocket_endpoint(
     """WebSocket endpoint for real-time project updates."""
     await manager.connect(project_id, websocket)
     
-    async with redis.from_url(settings.redis_url) as redis_client:
-        pubsub = redis_client.pubsub()
-        await pubsub.subscribe(f"project:{project_id}:updates")
-        
+    redis_client = redis.from_url(settings.redis_url)
+    pubsub = redis_client.pubsub()
+    await pubsub.subscribe(f"project:{project_id}:updates")
+    
+    try:
+        # Listen for messages from Redis
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                data = json.loads(message["data"])
+                await manager.broadcast(project_id, data)
+    except WebSocketDisconnect:
+        pass  # Normal disconnect, no need to log
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"WebSocket error for project {project_id}: {e}")
+    finally:
+        # Always cleanup on disconnect
+        manager.disconnect(project_id, websocket)
         try:
-            # Listen for messages from Redis
-            async for message in pubsub.listen():
-                if message["type"] == "message":
-                    data = json.loads(message["data"])
-                    await manager.broadcast(project_id, data)
-        except WebSocketDisconnect:
-            manager.disconnect(project_id, websocket)
             await pubsub.unsubscribe(f"project:{project_id}:updates")
-        except Exception as e:
-            manager.disconnect(project_id, websocket)
-            await pubsub.unsubscribe(f"project:{project_id}:updates")
-            raise e
+            await pubsub.close()
+        except Exception:
+            pass  # Ignore errors during cleanup
+        try:
+            await redis_client.close()
+        except Exception:
+            pass  # Ignore errors during cleanup
