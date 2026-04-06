@@ -82,6 +82,10 @@ export const projectApi = {
     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
     return api.post(`/projects/${id}/start`, {}, { params });
   },
+  resume: (id, guestSessionToken) => {
+    const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
+    return api.post(`/projects/${id}/resume`, {}, { params });
+  },
   clearPages: (id, guestSessionToken) => {
     const params = guestSessionToken ? { guest_session_token: guestSessionToken } : {};
     return api.delete(`/projects/${id}/pages`, { params });

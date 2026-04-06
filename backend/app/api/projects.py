@@ -750,6 +750,122 @@ async def start_project(
     crawl_project.delay(project_id)
 
 
+@router.post("/{project_id}/resume")
+async def resume_project(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    request: Request,
+    token: str | None = Depends(oauth2_scheme_optional),
+    guest_session_token: Optional[str] = Query(None, description="Guest session token for unauthenticated access")
+):
+    """Resume a previously stopped or interrupted project without clearing existing pages.
+    This continues from where the project left off, preserving already processed pages."""
+    from fastapi.security import OAuth2PasswordBearer
+    oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+    
+    # Try to get authenticated user first
+    if token is None:
+        token = await oauth2_scheme_optional(request)
+    user = await get_optional_user(token, db) if token else None
+    
+    guest_session = None
+    if user:
+        # Authenticated user: check if project belongs to them
+        project = await safe_scalar(
+            db,
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user.id
+            )
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+    else:
+        # No authenticated user, check guest session
+        if guest_session_token:
+            result = await db.execute(
+                select(GuestSession).where(GuestSession.session_token == guest_session_token)
+            )
+            guest_session = result.scalar_one_or_none()
+            if guest_session:
+                # Check if project belongs to this guest session
+                project = await safe_scalar(
+                    db,
+                    select(Project).where(
+                        Project.id == project_id,
+                        Project.user_id == 1,  # Default user
+                        Project.guest_session_id == guest_session.id
+                    )
+                )
+                if not project:
+                    raise HTTPException(status_code=404, detail="Project not found")
+                # Update guest session activity
+                from sqlalchemy import update
+                await db.execute(
+                    update(GuestSession)
+                    .where(GuestSession.id == guest_session.id)
+                    .values(last_activity=func.now())
+                )
+                await db.commit()
+            else:
+                # Invalid guest token
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid guest session"
+                )
+        else:
+            # No credentials - try default user's public projects only
+            project = await safe_scalar(
+                db,
+                select(Project).where(
+                    Project.id == project_id,
+                    Project.user_id == 1,
+                    Project.guest_session_id.is_(None)
+                )
+            )
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check if project is already running
+    if project.status in [ProjectStatus.CRAWLING, ProjectStatus.PARSING, ProjectStatus.ANALYZING]:
+        raise HTTPException(status_code=400, detail="Project is already running")
+    
+    # Reset any pending/processing queue items to pending (they were interrupted)
+    await db.execute(
+        update(CrawlQueue)
+        .where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status.in_([QueueStatus.PROCESSING])
+        )
+        .values(status=QueueStatus.PENDING)
+    )
+    
+    # If queue is empty (fresh start or all completed), add base URL
+    queue_count = await safe_scalar(
+        db,
+        select(func.count()).select_from(CrawlQueue).where(
+            CrawlQueue.project_id == project_id,
+            CrawlQueue.status.in_([QueueStatus.PENDING, QueueStatus.PROCESSING, QueueStatus.COMPLETED])
+        )
+    )
+    
+    if not queue_count or queue_count == 0:
+        # Add base URL to queue
+        queue_item = CrawlQueue(
+            project_id=project_id,
+            url=project.base_url,
+            status=QueueStatus.PENDING
+        )
+        db.add(queue_item)
+    
+    # Update project status to crawling
+    project.status = ProjectStatus.CRAWLING
+    await db.commit()
+    
+    # Trigger async crawl task
+    crawl_project.delay(project_id)
+
+
 @router.get("/{project_id}/export-xlsx")
 async def export_project_xlsx(
     project_id: int,

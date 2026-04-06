@@ -428,6 +428,18 @@ function ProjectPage() {
     }
   };
 
+  const handleResume = async () => {
+    try {
+      const guestToken = getGuestToken();
+      await projectApi.resume(id, guestToken);
+      // Optimistically update status to crawling
+      setProject(prev => prev ? { ...prev, status: 'crawling' } : null);
+      // Don't clear pages - we're resuming from where we left off
+    } catch (err) {
+      setError(t('errors.failedToResumeProject') + ': ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
   const handleClear = async () => {
     try {
       const guestToken = getGuestToken();
@@ -857,10 +869,21 @@ function ProjectPage() {
               variant="contained"
               startIcon={<PlayArrow />}
               onClick={handleStart}
-              disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status)}
+              disabled={['crawling', 'parsing', 'analyzing'].includes(project?.status) || ['stopped', 'failed'].includes(project?.status)}
             >
               {t('project.startDownload')}
             </Button>
+            {['stopped', 'failed'].includes(project?.status) && (
+              <Button
+                data-block="resume-button"
+                variant="contained"
+                startIcon={<PlayArrow />}
+                onClick={handleResume}
+                color="warning"
+              >
+                {t('project.resume', 'Resume')}
+              </Button>
+            )}
             <Button
               data-block="stop-button"
               variant="outlined"
