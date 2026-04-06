@@ -151,6 +151,8 @@ function ProjectPage() {
   const [uniqueWordsDialogOpen, setUniqueWordsDialogOpen] = useState(false);
   const [uniqueForeignWords, setUniqueForeignWords] = useState([]);
   const [uniqueWordsLoading, setUniqueWordsLoading] = useState(false);
+  const [uniqueWordsSortBy, setUniqueWordsSortBy] = useState('total_count');
+  const [uniqueWordsSortOrder, setUniqueWordsSortOrder] = useState('desc');
   const [whitelistDialogOpen, setWhitelistDialogOpen] = useState(false);
   const [whitelistWords, setWhitelistWords] = useState([]);
   const [whitelistLoading, setWhitelistLoading] = useState(false);
@@ -1269,13 +1271,78 @@ function ProjectPage() {
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox"></TableCell>
-                      <TableCell>{t('single.word', 'Word')}</TableCell>
-                      <TableCell align="right">{t('single.count', 'Count')}</TableCell>
-                      <TableCell>{t('project.pages', 'Pages')}</TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={uniqueWordsSortBy === 'word'}
+                          direction={uniqueWordsSortBy === 'word' ? uniqueWordsSortOrder : 'asc'}
+                          onClick={() => {
+                            if (uniqueWordsSortBy === 'word') {
+                              setUniqueWordsSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setUniqueWordsSortBy('word');
+                              setUniqueWordsSortOrder('asc');
+                            }
+                          }}
+                        >
+                          {t('single.word', 'Word')}
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="right">
+                        <TableSortLabel
+                          active={uniqueWordsSortBy === 'total_count'}
+                          direction={uniqueWordsSortBy === 'total_count' ? uniqueWordsSortOrder : 'desc'}
+                          onClick={() => {
+                            if (uniqueWordsSortBy === 'total_count') {
+                              setUniqueWordsSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setUniqueWordsSortBy('total_count');
+                              setUniqueWordsSortOrder('desc');
+                            }
+                          }}
+                        >
+                          {t('single.count', 'Count')}
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="right">
+                        <TableSortLabel
+                          active={uniqueWordsSortBy === 'pages_count'}
+                          direction={uniqueWordsSortBy === 'pages_count' ? uniqueWordsSortOrder : 'desc'}
+                          onClick={() => {
+                            if (uniqueWordsSortBy === 'pages_count') {
+                              setUniqueWordsSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setUniqueWordsSortBy('pages_count');
+                              setUniqueWordsSortOrder('desc');
+                            }
+                          }}
+                        >
+                          {t('project.pages', 'Pages')}
+                        </TableSortLabel>
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {uniqueForeignWords.map((wordData, index) => (
+                    {[...uniqueForeignWords]
+                      .sort((a, b) => {
+                        let aVal, bVal;
+                        if (uniqueWordsSortBy === 'word') {
+                          aVal = a.word.toLowerCase();
+                          bVal = b.word.toLowerCase();
+                        } else if (uniqueWordsSortBy === 'total_count') {
+                          aVal = a.total_count || 0;
+                          bVal = b.total_count || 0;
+                        } else if (uniqueWordsSortBy === 'pages_count') {
+                          aVal = a.pages?.length || 0;
+                          bVal = b.pages?.length || 0;
+                        } else {
+                          return 0;
+                        }
+                        
+                        if (aVal < bVal) return uniqueWordsSortOrder === 'asc' ? -1 : 1;
+                        if (aVal > bVal) return uniqueWordsSortOrder === 'asc' ? 1 : -1;
+                        return 0;
+                      })
+                      .map((wordData, index) => (
                       <ForeignWordRow
                         key={wordData.word}
                         word={wordData.word}
