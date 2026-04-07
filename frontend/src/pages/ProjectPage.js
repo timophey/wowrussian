@@ -721,8 +721,8 @@ function ProjectPage() {
   return (
     <Container data-block="project-container" maxWidth="lg" sx={{ mt: 8 }}>
       <Box data-block="project-header" sx={{ mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/projects')} sx={{ mb: 2 }}>
-          {t('project.backToProjects')}
+        <Button startIcon={<ArrowBack />} onClick={() => navigate(isAuthenticated ? '/projects' : '/')} sx={{ mb: 2 }}>
+          {isAuthenticated ? t('project.backToProjects') : t('single.back')}
         </Button>
         <Typography variant="h4" gutterBottom>
           {project?.domain}
