@@ -58,7 +58,7 @@ function SinglePage() {
 
   return (
     <Container data-block="single-page-container" maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box data-block="single-page-header" display="flex" alignItems="center" gap={2} mb={3}>
+      <Box data-block="single-page-header" display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/')}
@@ -72,7 +72,7 @@ function SinglePage() {
       </Box>
       
       {/* URL Input Form */}
-      <Paper data-block="single-analysis-form" sx={{ p: 3, mb: 4 }}>
+      <Paper data-block="single-analysis-form" sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <Typography variant="h6" gutterBottom>
           {t('single.urlLabel')}
         </Typography>
@@ -106,13 +106,14 @@ function SinglePage() {
             }}
           />
           
-          <Box data-block="form-buttons" display="flex" gap={2}>
+          <Box data-block="form-buttons" display="flex" gap={2} flexWrap="wrap">
             <Button
               data-block="analyze-button"
               type="submit"
               variant="contained"
               startIcon={loading ? <CircularProgress size={20} /> : <Search />}
               disabled={loading}
+              sx={{ flex: { xs: '1 1 100%', sm: 'auto' } }}
             >
               {loading ? t('single.analyzing') : t('single.analyzeButton')}
             </Button>
@@ -131,7 +132,7 @@ function SinglePage() {
                 variant="outlined"
                 startIcon={<Visibility />}
                 onClick={downloadReport}
-                sx={{ ml: 'auto' }}
+                sx={{ ml: { xs: 0, sm: 'auto' } }}
               >
                 {t('single.downloadJson')}
               </Button>

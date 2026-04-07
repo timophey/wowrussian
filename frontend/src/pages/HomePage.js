@@ -247,12 +247,13 @@ function HomePage() {
           {t('home.subtitle')}
         </Typography>
 
-        <Paper data-block="analysis-form" elevation={3} sx={{ p: 4, width: '100%' }}>
+        <Paper data-block="analysis-form" elevation={3} sx={{ p: { xs: 2, sm: 4 }, width: '100%' }}>
           {/* Tabs */}
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
-            variant="fullWidth"
+            variant="scrollable"
+            scrollButtons="auto"
             sx={{ mb: 3 }}
           >
             {tabOrder.map((tabKey, index) => (
@@ -382,7 +383,7 @@ function HomePage() {
               </Alert>
             )}
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <Button
                 data-block="analyze-button"
                 type="submit"
@@ -390,7 +391,7 @@ function HomePage() {
                 size="large"
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} /> : null}
-                sx={{ flex: 1 }}
+                sx={{ flex: { xs: '1 1 100%', sm: 1 } }}
               >
                 {loading ? (tabOrder[activeTab] === 'site' ? t('home.creating') : t('home.analyzing')) : t('home.analyzeButton')}
               </Button>
