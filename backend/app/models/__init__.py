@@ -7,5 +7,6 @@ from app.models.crawl_queue import CrawlQueue
 from app.models.guest_session import GuestSession
 from app.models.export_job import ExportJob
 from app.models.whitelist_word import WhitelistWord
+from app.models.static_page import StaticPage
 
-__all__ = ["User", "Project", "Page", "ForeignWord", "RussianWord", "CrawlQueue", "GuestSession", "ExportJob", "WhitelistWord"]
+__all__ = ["User", "Project", "Page", "ForeignWord", "RussianWord", "CrawlQueue", "GuestSession", "ExportJob", "WhitelistWord", "StaticPage"]

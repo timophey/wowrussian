@@ -11,6 +11,7 @@ from app.api.websocket import websocket_router
 from app.api.admin import router as admin_router
 from app.api.guest_sessions import router as guest_sessions_router
 from app.api.single import router as single_router
+from app.api.static_pages import router as static_pages_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,6 +46,7 @@ app.include_router(stats.router, prefix="/api", tags=["stats"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(guest_sessions_router, prefix="/api", tags=["guest"])
 app.include_router(single_router, prefix="/api", tags=["single"])
+app.include_router(static_pages_router, prefix="/api", tags=["static-pages"])
 app.include_router(websocket_router)
 
 # Health check endpoint

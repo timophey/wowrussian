@@ -32,6 +32,7 @@ import {
 } from '@mui/material';
 import { Add, Delete, ArrowBack, Visibility, Edit, Person, AdminPanelSettings, Settings as SettingsIcon } from '@mui/icons-material';
 import { adminApi, projectApi } from '../services/api';
+import StaticPagesEditor from '../components/StaticPagesEditor';
 
 function AdminPage() {
   const { t } = useTranslation();
@@ -71,6 +72,9 @@ function AdminPage() {
   
   // Check for user_id in URL (for viewing specific user's projects)
   const urlUserId = searchParams.get('user_id');
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
 
   // Check if admin key is stored or if user has admin role
   useEffect(() => {
@@ -323,12 +327,20 @@ function AdminPage() {
           </Alert>
         )}
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-            <CircularProgress />
-          </Box>
-        ) : (
-          <TableContainer data-block="users-table" component={Paper}>
+        {/* Tabs for Users and Static Pages */}
+        <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label={t('admin.users', 'Users')} />
+          <Tab label={t('admin.staticPages', 'Static Pages')} />
+        </Tabs>
+
+        {/* Users Tab */}
+        {activeTab === 0 && (
+          loading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer data-block="users-table" component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
@@ -410,6 +422,14 @@ function AdminPage() {
               </TableBody>
             </Table>
           </TableContainer>
+          )
+        )}
+
+        {/* Static Pages Tab */}
+        {activeTab === 1 && (
+          <Paper sx={{ p: 3 }}>
+            <StaticPagesEditor adminKey={adminKey} useTokenAuth={useTokenAuth} />
+          </Paper>
         )}
       </Box>
 

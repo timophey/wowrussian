@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="iconGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Magnifying glass icon -->
+  <circle cx="17" cy="17" r="11" fill="none" stroke="url(#iconGrad2)" stroke-width="3" />
+  <line x1="25" y1="25" x2="35" y2="35" stroke="url(#iconGrad2)" stroke-width="3" stroke-linecap="round" />
+  <!-- RU text inside magnifying glass -->
+  <text x="10" y="22" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1976D2">РУ</text>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 50" width="180" height="50">
+  <defs>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Badge shape -->
+  <rect x="2" y="2" width="176" height="46" rx="8" fill="url(#badgeGrad)" />
+  <!-- Star accent -->
+  <polygon points="20,12 22,18 28,18 23,22 25,28 20,24 15,28 17,22 12,18 18,18" fill="#FFC107" />
+  <!-- Text -->
+  <text x="35" y="32" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="white">
+    WowRussian
+  </text>
+</svg>

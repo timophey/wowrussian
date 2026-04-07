@@ -1,13 +1,16 @@
 # Build stage
 FROM node:18-alpine as build
 
+ARG LOGO_FILE=logo-icon-text.svg
+ENV REACT_APP_LOGO_FILE=$LOGO_FILE
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies (cached unless package.json changes)
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy source code (only if not in .dockerignore)
 COPY src/ ./src/
@@ -19,6 +22,9 @@ RUN npm run build
 
 # Production stage
 FROM nginx:alpine
+
+ARG LOGO_FILE=logo-icon-text.svg
+ENV LOGO_FILE=$LOGO_FILE
 
 # Copy built app from build stage
 COPY --from=build /app/build /usr/share/nginx/html

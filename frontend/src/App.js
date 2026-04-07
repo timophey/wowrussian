@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link as RouterLink } from 'react-router-dom';
 import { Container, Box, IconButton, Typography, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, CircularProgress, Divider, Link } from '@mui/material';
 import { Visibility, Person, Logout, Language as LanguageIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -13,6 +13,7 @@ import AdminPage from './pages/AdminPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import LegalInfoPage from './pages/LegalInfoPage';
+import StaticPage from './pages/StaticPage';
 import Footer from './components/Footer';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import { useTranslation } from 'react-i18next';
@@ -101,8 +102,7 @@ function Header() {
         right: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 1,
+        justifyContent: 'space-between',
         padding: '8px 16px',
         bgcolor: 'background.paper',
         borderBottom: 1,
@@ -111,6 +111,28 @@ function Header() {
         boxShadow: 1,
       }}
     >
+      {/* Logo */}
+      <Box
+        component={RouterLink}
+        to="/"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          textDecoration: 'none',
+          '&:hover': {
+            opacity: 0.8,
+          },
+        }}
+      >
+        <img
+          src={`${process.env.PUBLIC_URL}/logos/${process.env.REACT_APP_LOGO_FILE || 'logo-icon-text.svg'}`}
+          alt="WowRussian"
+          style={{ height: '36px', width: 'auto' }}
+        />
+      </Box>
+
+      {/* Right side controls */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       {/* Language Switcher */}
       <Tooltip title={i18n.language === 'ru' ? 'Switch to English' : 'Переключить на русский'}>
         <IconButton
@@ -245,6 +267,7 @@ function Header() {
           </Button>
         </Box>
       </Dialog>
+      </Box>
     </Box>
   );
 }
@@ -270,8 +293,9 @@ function App() {
             <Route path="/project/:projectId/page/:pageId" element={<PageDetailPage />} />
             <Route path="/single" element={<SinglePage />} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-            <Route path="/legal-info" element={<LegalInfoPage />} />
+            <Route path="/privacy-policy" element={<StaticPage />} />
+            <Route path="/legal-info" element={<StaticPage />} />
+            <Route path="/p/:url" element={<StaticPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Container>

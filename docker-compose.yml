@@ -152,7 +152,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - LOGO_FILE=${LOGO_FILE:-logo-icon-text.svg}
     container_name: wowrussian_frontend
+    environment:
+      - LOGO_FILE=${LOGO_FILE:-logo-icon-text.svg}
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     depends_on:
