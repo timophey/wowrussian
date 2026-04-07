@@ -4,6 +4,7 @@ import { Container, Box, IconButton, Typography, Button, Tooltip, Dialog, Dialog
 import { Visibility, Person, Logout, Language as LanguageIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomePage from './pages/HomePage';
+import NewProjectPage from './pages/NewProjectPage';
 import ProjectPage from './pages/ProjectPage';
 import ProjectsListPage from './pages/ProjectsListPage';
 import PageDetailPage from './pages/PageDetailPage';
@@ -262,6 +263,7 @@ function App() {
         <Container data-block="main-container" maxWidth="lg" sx={{ mt: 8, flex: 1, pb: 8 }}>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/newproject" element={<NewProjectPage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
             <Route path="/profile" element={<UserProfilePage />} />
             <Route path="/project/:id" element={<ProjectPage />} />

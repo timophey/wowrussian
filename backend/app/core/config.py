@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     operator_address: str = Field(default="", env="OPERATOR_ADDRESS")
     operator_email: str = Field(default="", env="OPERATOR_EMAIL")
 
+    # Tab order for home page (comma-separated list: text,url,site,file)
+    # Default order: site,text,url,file
+    tab_order: str = Field(default="site,text,url,file", env="TAB_ORDER")
+
     class Config:
         env_file = ".env"
         case_sensitive = False

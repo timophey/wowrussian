@@ -30,7 +30,8 @@ import AnalysisResults from '../components/AnalysisResults';
 function PageDetailPage() {
   const { t } = useTranslation();
   const { projectId, pageId } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -330,7 +331,7 @@ function PageDetailPage() {
     {/* 168-FZ Analysis Results using AnalysisResults Component */}
     {fz168Results && (
       <Box data-block="fz168-analysis-results" sx={{ mt: 4, mb: 4 }}>
-        <AnalysisResults results={fz168Results} pageUrl={page?.url} />
+        <AnalysisResults results={fz168Results} pageUrl={page?.url} isAdmin={isAdmin} />
       </Box>
     )}
 

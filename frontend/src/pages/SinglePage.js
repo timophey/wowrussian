@@ -20,11 +20,14 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSingleAnalysis } from '../hooks/useSingleAnalysis';
+import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
 
 function SinglePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   
   const {
     url,
@@ -145,7 +148,7 @@ function SinglePage() {
       
       {/* Results Section */}
       {showResults && results && (
-        <AnalysisResults results={results} />
+        <AnalysisResults results={results} isAdmin={isAdmin} />
       )}
     </Container>
   );

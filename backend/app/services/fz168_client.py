@@ -148,6 +148,54 @@ class FZ168Client:
         # Should not reach here, but just in case
         raise Exception("All retry attempts exhausted")
     
+    async def check_file(self, file_path: str, filename: str) -> Optional[Dict[str, Any]]:
+        """
+        Check file via 168fz API.
+        
+        Args:
+            file_path: Path to the file to analyze
+            filename: Original filename
+            
+        Returns:
+            Dictionary with analysis results from 168fz
+            
+        Raises:
+            Exception: If all retry attempts fail
+        """
+        url = f"{self.base_url}/api/v1/check/file"
+        
+        for attempt in range(1, self.retry_attempts + 1):
+            try:
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    with open(file_path, 'rb') as f:
+                        form_data = aiohttp.FormData()
+                        form_data.add_field('file', f, filename=filename)
+                        
+                        async with session.post(url, data=form_data) as response:
+                            if response.status == 200:
+                                result = await response.json()
+                                logger.info(f"168fz file check succeeded (attempt {attempt})")
+                                return result
+                            else:
+                                error_text = await response.text()
+                                logger.warning(f"168fz returned status {response.status}: {error_text}")
+                                if attempt == self.retry_attempts:
+                                    raise Exception(f"168fz API error: {response.status} - {error_text}")
+                                
+            except asyncio.TimeoutError:
+                logger.warning(f"168fz file request timeout (attempt {attempt}/{self.retry_attempts})")
+                if attempt == self.retry_attempts:
+                    raise Exception("168fz file request timeout")
+                    
+            except Exception as e:
+                logger.warning(f"168fz file request failed (attempt {attempt}/{self.retry_attempts}): {e}")
+                if attempt == self.retry_attempts:
+                    raise
+        
+        # Should not reach here, but just in case
+        raise Exception("All retry attempts exhausted")
+    
     async def health_check(self) -> bool:
         """
         Check if 168fz service is healthy.

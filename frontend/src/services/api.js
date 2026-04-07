@@ -243,6 +243,24 @@ export const singleApi = {
       'Pragma': 'no-cache'
     }
   }),
+  checkText: (text) => api.post('/single/check-text', { text }, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  }),
+  checkFile: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/single/check-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+  },
+  getConfig: () => api.get('/single/config'),
 };
 
 export default api;

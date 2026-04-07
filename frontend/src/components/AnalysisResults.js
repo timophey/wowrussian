@@ -42,7 +42,7 @@ import {
   FileDownload,
 } from '@mui/icons-material';
 
-function AnalysisResults({ results, onDownload, pageUrl }) {
+function AnalysisResults({ results, onDownload, pageUrl, isAdmin = false }) {
   const { t, i18n } = useTranslation();
 
   const [order, setOrder] = useState('asc');
@@ -301,7 +301,7 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
 
       {/* Status Summary */}
       {allWords.length > 0 && (
-        <Paper data-block="status-summary" sx={{ p: 2, mb: 3 }}>
+        <Paper data-block="status-summary" sx={{ p: 2, mb: 3, width: '100%' }}>
           <Typography variant="subtitle1" gutterBottom>
             {t('single.statusSummary')}
           </Typography>
@@ -468,203 +468,207 @@ function AnalysisResults({ results, onDownload, pageUrl }) {
         </Paper>
       )}
 
-      {/* Accordions for detailed info */}
-      <Accordion data-block="summary-accordion" sx={{ mb: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMore />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Assessment />
-            <Typography>{t('single.summaryTitle')}</Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          {Object.keys(summary).length > 0 ? (
-            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem' }}>
-              {JSON.stringify(summary, null, 2)}
-            </pre>
-          ) : (
-            <Typography color="text.secondary">{t('single.noData')}</Typography>
-          )}
-        </AccordionDetails>
-      </Accordion>
-
-      <Accordion data-block="checks-accordion" sx={{ mb: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMore />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <CheckCircle />
-            <Typography>{t('single.checksTitle')}</Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          {checks.prohibited_words && checks.prohibited_words.length > 0 ? (
-            <Paper data-block="prohibited-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'error.main' }}>
-              <Paper sx={{ bgcolor: 'error.main', color: 'white', p: 1 }}>
-                <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  ⚠️ {t('fz168.prohibitedWords', { defaultValue: 'Запрещенные слова' })} ({checks.prohibited_words.length})
-                </Typography>
-              </Paper>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('single.word')}</TableCell>
-                      <TableCell align="right">{t('single.count')}</TableCell>
-                      <TableCell>{t('fz168.lawArticle')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {checks.prohibited_words.map((item, idx) => (
-                      <TableRow key={idx} hover>
-                        <TableCell><strong>{item.word}</strong></TableCell>
-                        <TableCell align="right">{item.count}</TableCell>
-                        <TableCell>{item.law_article || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : null}
-
-          {checks.foreign_words && checks.foreign_words.length > 0 ? (
-            <Paper data-block="foreign-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'warning.main' }}>
-              <Paper sx={{ bgcolor: 'warning.main', color: 'text.primary', p: 1 }}>
-                <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  🌐 {t('fz168.foreignWords', { defaultValue: 'Иностранные слова' })} ({checks.foreign_words.length})
-                </Typography>
-              </Paper>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('single.word')}</TableCell>
-                      <TableCell align="right">{t('single.count')}</TableCell>
-                      <TableCell>{t('single.recommendation')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {checks.foreign_words.map((item, idx) => (
-                      <TableRow key={idx} hover>
-                        <TableCell>{item.word}</TableCell>
-                        <TableCell align="right">{item.count}</TableCell>
-                        <TableCell>{item.recommendation || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : null}
-
-          {checks.normative_violations && checks.normative_violations.length > 0 ? (
-            <Paper data-block="normative-violations-section" variant="outlined" sx={{ mb: 2, borderColor: 'info.main' }}>
-              <Paper sx={{ bgcolor: 'info.main', color: 'white', p: 1 }}>
-                <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  📚 {t('fz168.normativeViolations', { defaultValue: 'Нарушения норм' })} ({checks.normative_violations.length})
-                </Typography>
-              </Paper>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('single.word')}</TableCell>
-                      <TableCell align="right">{t('single.count')}</TableCell>
-                      <TableCell>{t('fz168.explanation')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {checks.normative_violations.map((item, idx) => (
-                      <TableRow key={idx} hover>
-                        <TableCell>{item.word}</TableCell>
-                        <TableCell align="right">{item.count}</TableCell>
-                        <TableCell>{item.issue || item.explanation || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : null}
-
-          {checks.recommendations && checks.recommendations.length > 0 ? (
-            <Paper data-block="recommendations-section" variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                💡 {t('fz168.recommendations', { defaultValue: 'Рекомендации' })}
-              </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                {checks.recommendations.map((rec, idx) => (
-                  <li key={idx}><Typography variant="body2">{rec}</Typography></li>
-                ))}
+      {/* Accordions for detailed info - Admin only */}
+      {isAdmin && (
+        <>
+          <Accordion data-block="summary-accordion" sx={{ mb: 2, width: '100%' }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Assessment />
+                <Typography>{t('single.summaryTitle')}</Typography>
               </Box>
-            </Paper>
-          ) : null}
+            </AccordionSummary>
+            <AccordionDetails>
+              {Object.keys(summary).length > 0 ? (
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem', width: '100%' }}>
+                  {JSON.stringify(summary, null, 2)}
+                </pre>
+              ) : (
+                <Typography color="text.secondary">{t('single.noData')}</Typography>
+              )}
+            </AccordionDetails>
+          </Accordion>
 
-          {(!checks.prohibited_words || checks.prohibited_words.length === 0) &&
-            (!checks.foreign_words || checks.foreign_words.length === 0) &&
-            (!checks.normative_violations || checks.normative_violations.length === 0) &&
-            (!checks.recommendations || checks.recommendations.length === 0) && (
-            <Typography color="text.secondary">{t('single.noData')}</Typography>
-          )}
-        </AccordionDetails>
-      </Accordion>
+          <Accordion data-block="checks-accordion" sx={{ mb: 2, width: '100%' }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircle />
+                <Typography>{t('single.checksTitle')}</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              {checks.prohibited_words && checks.prohibited_words.length > 0 ? (
+                <Paper data-block="prohibited-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'error.main', width: '100%' }}>
+                  <Paper sx={{ bgcolor: 'error.main', color: 'white', p: 1 }}>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      ⚠️ {t('fz168.prohibitedWords', { defaultValue: 'Запрещенные слова' })} ({checks.prohibited_words.length})
+                    </Typography>
+                  </Paper>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t('single.word')}</TableCell>
+                          <TableCell align="right">{t('single.count')}</TableCell>
+                          <TableCell>{t('fz168.lawArticle')}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {checks.prohibited_words.map((item, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell><strong>{item.word}</strong></TableCell>
+                            <TableCell align="right">{item.count}</TableCell>
+                            <TableCell>{item.law_article || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              ) : null}
 
-      <Accordion data-block="statistics-accordion" sx={{ mb: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMore />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <MenuBook />
-            <Typography>{t('single.statisticsTitle')}</Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem' }}>
-            {JSON.stringify(stats, null, 2)}
-          </pre>
-        </AccordionDetails>
-      </Accordion>
+              {checks.foreign_words && checks.foreign_words.length > 0 ? (
+                <Paper data-block="foreign-words-section" variant="outlined" sx={{ mb: 2, borderColor: 'warning.main', width: '100%' }}>
+                  <Paper sx={{ bgcolor: 'warning.main', color: 'text.primary', p: 1 }}>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      🌐 {t('fz168.foreignWords', { defaultValue: 'Иностранные слова' })} ({checks.foreign_words.length})
+                    </Typography>
+                  </Paper>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t('single.word')}</TableCell>
+                          <TableCell align="right">{t('single.count')}</TableCell>
+                          <TableCell>{t('single.recommendation')}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {checks.foreign_words.map((item, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell>{item.word}</TableCell>
+                            <TableCell align="right">{item.count}</TableCell>
+                            <TableCell>{item.recommendation || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              ) : null}
 
-      <Accordion sx={{ mb: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMore />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Warning />
-            <Typography>{t('single.dictionariesTitle')}</Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          {dictionaries.length > 0 ? (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t('fz168.dictionaryName', { defaultValue: 'Название' })}</TableCell>
-                    <TableCell align="right">{t('fz168.wordsCount', { defaultValue: 'Слов' })}</TableCell>
-                    <TableCell>{t('fz168.category', { defaultValue: 'Категория' })}</TableCell>
-                    <TableCell>{t('fz168.source', { defaultValue: 'Источник' })}</TableCell>
-                    <TableCell>{t('fz168.status', { defaultValue: 'Статус' })}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {dictionaries.map((dict, idx) => (
-                    <TableRow key={idx} hover>
-                      <TableCell>{dict.name || dict.id}</TableCell>
-                      <TableCell align="right">{dict.words_count?.toLocaleString() || '-'}</TableCell>
-                      <TableCell>{dict.category || dict.category_code || '-'}</TableCell>
-                      <TableCell>{dict.source || '-'}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={dict.status || 'unknown'}
-                          size="small"
-                          color={dict.status === 'synced' ? 'success' : 'default'}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography color="text.secondary">{t('single.noData')}</Typography>
-          )}
-        </AccordionDetails>
-      </Accordion>
+              {checks.normative_violations && checks.normative_violations.length > 0 ? (
+                <Paper data-block="normative-violations-section" variant="outlined" sx={{ mb: 2, borderColor: 'info.main', width: '100%' }}>
+                  <Paper sx={{ bgcolor: 'info.main', color: 'white', p: 1 }}>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      📚 {t('fz168.normativeViolations', { defaultValue: 'Нарушения норм' })} ({checks.normative_violations.length})
+                    </Typography>
+                  </Paper>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t('single.word')}</TableCell>
+                          <TableCell align="right">{t('single.count')}</TableCell>
+                          <TableCell>{t('fz168.explanation')}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {checks.normative_violations.map((item, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell>{item.word}</TableCell>
+                            <TableCell align="right">{item.count}</TableCell>
+                            <TableCell>{item.issue || item.explanation || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              ) : null}
+
+              {checks.recommendations && checks.recommendations.length > 0 ? (
+                <Paper data-block="recommendations-section" variant="outlined" sx={{ p: 2, width: '100%' }}>
+                  <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    💡 {t('fz168.recommendations', { defaultValue: 'Рекомендации' })}
+                  </Typography>
+                  <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                    {checks.recommendations.map((rec, idx) => (
+                      <li key={idx}><Typography variant="body2">{rec}</Typography></li>
+                    ))}
+                  </Box>
+                </Paper>
+              ) : null}
+
+              {(!checks.prohibited_words || checks.prohibited_words.length === 0) &&
+                (!checks.foreign_words || checks.foreign_words.length === 0) &&
+                (!checks.normative_violations || checks.normative_violations.length === 0) &&
+                (!checks.recommendations || checks.recommendations.length === 0) && (
+                <Typography color="text.secondary">{t('single.noData')}</Typography>
+              )}
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion data-block="statistics-accordion" sx={{ mb: 2, width: '100%' }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <MenuBook />
+                <Typography>{t('single.statisticsTitle')}</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem', width: '100%' }}>
+                {JSON.stringify(stats, null, 2)}
+              </pre>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion data-block="dictionaries-accordion" sx={{ mb: 2, width: '100%' }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Warning />
+                <Typography>{t('single.dictionariesTitle')}</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              {dictionaries.length > 0 ? (
+                <TableContainer component={Paper} variant="outlined" sx={{ width: '100%' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('fz168.dictionaryName', { defaultValue: 'Название' })}</TableCell>
+                        <TableCell align="right">{t('fz168.wordsCount', { defaultValue: 'Слов' })}</TableCell>
+                        <TableCell>{t('fz168.category', { defaultValue: 'Категория' })}</TableCell>
+                        <TableCell>{t('fz168.source', { defaultValue: 'Источник' })}</TableCell>
+                        <TableCell>{t('fz168.status', { defaultValue: 'Статус' })}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {dictionaries.map((dict, idx) => (
+                        <TableRow key={idx} hover>
+                          <TableCell>{dict.name || dict.id}</TableCell>
+                          <TableCell align="right">{dict.words_count?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>{dict.category || dict.category_code || '-'}</TableCell>
+                          <TableCell>{dict.source || '-'}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={dict.status || 'unknown'}
+                              size="small"
+                              color={dict.status === 'synced' ? 'success' : 'default'}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography color="text.secondary">{t('single.noData')}</Typography>
+              )}
+            </AccordionDetails>
+          </Accordion>
+        </>
+      )}
 
       {/* Export Dialog */}
       <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="xs" fullWidth>

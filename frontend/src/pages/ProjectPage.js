@@ -120,7 +120,8 @@ const ForeignWordRow = React.memo(({ word, wordCount, pagesCount, pages, isAlrea
 function ProjectPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const navigate = useNavigate();
   
@@ -1037,7 +1038,7 @@ function ProjectPage() {
             <DialogTitle>{selectedPage?.url}</DialogTitle>
             <DialogContent>
               {pageDetail.fz168_raw_response?.data ? (
-                <AnalysisResults results={pageDetail.fz168_raw_response.data} pageUrl={selectedPage?.url} />
+                <AnalysisResults results={pageDetail.fz168_raw_response.data} pageUrl={selectedPage?.url} isAdmin={isAdmin} />
               ) : (
                 <Alert severity="warning">
                   {t('page.analysisNotAvailable')}
