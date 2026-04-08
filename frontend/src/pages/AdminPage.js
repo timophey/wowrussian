@@ -33,9 +33,11 @@ import {
 import { Add, Delete, ArrowBack, Visibility, Edit, Person, AdminPanelSettings, Settings as SettingsIcon } from '@mui/icons-material';
 import { adminApi, projectApi } from '../services/api';
 import StaticPagesEditor from '../components/StaticPagesEditor';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function AdminPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('admin.adminPanel'));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user: currentUser, isAuthenticated: isUserAuthenticated } = useAuth();

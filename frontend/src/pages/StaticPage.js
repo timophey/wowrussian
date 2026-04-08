@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Container, Typography, Paper, CircularProgress, Alert, Box } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -14,6 +15,10 @@ function StaticPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(null);
   const [error, setError] = useState('');
+
+  // Set document title from page title with app suffix
+  const docTitle = page?.title ? `${page.title} - WowRussian` : 'WowRussian';
+  useDocumentTitle(docTitle, false);
 
   // Extract URL from either route param or pathname
   const getPageUrl = () => {

@@ -37,6 +37,7 @@ import { projectApi, pageApi, statsApi } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const STATUS_COLORS = {
   pending: 'default',
@@ -158,6 +159,10 @@ function ProjectPage() {
   const [whitelistWords, setWhitelistWords] = useState([]);
   const [whitelistLoading, setWhitelistLoading] = useState(false);
   const [selectedCount, setSelectedCount] = useState(0);
+
+  // Compute title for document
+  const projectTitle = project?.domain ? project.domain : t('project.title');
+  useDocumentTitle(projectTitle);
 
   // Ref for tracking selected words (managed by child components)
   const selectedWordsRef = useRef(new Set());

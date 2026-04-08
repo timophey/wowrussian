@@ -21,9 +21,11 @@ import {
 import { ArrowBack, Lock, DeleteForever } from '@mui/icons-material';
 import { authApi } from '../services/api';
 import DataDeletionDialog from '../components/DataDeletionDialog';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function UserProfilePage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('profile.title'));
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   

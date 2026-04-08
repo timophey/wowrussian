@@ -75,6 +75,7 @@
     "queued": "Queued"
   },
   "project": {
+    "title": "Project",
     "backToProjects": "Back to Projects",
     "websocket": "WebSocket",
     "connected": "Connected",

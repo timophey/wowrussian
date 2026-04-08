@@ -1,9 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Container, Typography, Box, Paper, Link, List, ListItem, ListItemText } from '@mui/material';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function PrivacyPolicyPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('privacy.title'));
 
   return (
     <Container data-block="privacy-policy-container" maxWidth="md" sx={{ mt: 8, mb: 4 }}>

@@ -75,6 +75,7 @@
     "queued": "В очереди"
   },
   "project": {
+    "title": "Проект",
     "backToProjects": "Назад к Проектам",
     "websocket": "WebSocket",
     "connected": "Подключен",

@@ -29,6 +29,7 @@ import {
 import { Visibility, Delete, Add, Person, ArrowBack } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { projectApi } from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const STATUS_COLORS = {
   pending: 'default',
@@ -42,6 +43,7 @@ const STATUS_COLORS = {
 
 function ProjectsListPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('projects.title'));
   const { isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

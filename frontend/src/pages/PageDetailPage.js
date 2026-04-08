@@ -26,6 +26,7 @@ import { ArrowBack, Visibility, Code } from '@mui/icons-material';
 import { pageApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function PageDetailPage() {
   const { t } = useTranslation();
@@ -41,6 +42,18 @@ function PageDetailPage() {
   const [textDialogOpen, setTextDialogOpen] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
   const [textContent, setTextContent] = useState('');
+
+  // Set document title - use URL host (with port if any) and path to avoid overly long titles
+  const getDisplayUrl = (url) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.host + urlObj.pathname;
+    } catch {
+      return url;
+    }
+  };
+  const pageTitle = page?.url ? `${getDisplayUrl(page.url)} - ${t('page.pageAnalysis')}` : t('page.pageAnalysis');
+  useDocumentTitle(pageTitle);
 
   // Get language display name
   const getLanguageName = (code) => {

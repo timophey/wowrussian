@@ -22,9 +22,11 @@ import { useNavigate } from 'react-router-dom';
 import { useSingleAnalysis } from '../hooks/useSingleAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function SinglePage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('single.title'));
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';

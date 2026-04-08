@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
 import { authApi, projectApi, guestApi, singleApi } from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 // Tab order mapping
 const TAB_MAP = {
@@ -36,6 +37,7 @@ const TAB_MAP = {
 
 function HomePage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('home.title'), false);
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();

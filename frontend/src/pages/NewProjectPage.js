@@ -20,9 +20,11 @@ import {
 import { Visibility, Person, Logout } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi, projectApi, guestApi } from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function NewProjectPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('projects.newAnalysis'));
   const { user, login, logout, isAuthenticated } = useAuth();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);

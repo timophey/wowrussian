@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Container, Typography, Box, Paper, Divider, CircularProgress, Alert } from '@mui/material';
 import axios from 'axios';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 function LegalInfoPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('legalInfo.title'));
   const [loading, setLoading] = useState(true);
   const [legalInfo, setLegalInfo] = useState(null);
   const [error, setError] = useState('');
