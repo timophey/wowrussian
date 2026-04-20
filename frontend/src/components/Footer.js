@@ -11,7 +11,7 @@ function Footer() {
       component="footer"
       sx={{
         bgcolor: 'background.paper',
-        borderTop: 1,
+        borderTop: 0,
         borderColor: 'divider',
         py: 2,
         mt: 'auto',

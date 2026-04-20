@@ -157,6 +157,7 @@ services:
     container_name: wowrussian_frontend
     environment:
       - LOGO_FILE=${LOGO_FILE:-logo-icon-text.svg}
+      - GENERATE_SOURCEMAP=true
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     depends_on:

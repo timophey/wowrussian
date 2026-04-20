@@ -26,6 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AnalysisResults from '../components/AnalysisResults';
 import { authApi, projectApi, guestApi, singleApi } from '../services/api';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import TextFieldRounded from '../components/TextFieldRounded';
 
 // Tab order mapping
 const TAB_MAP = {
@@ -265,157 +266,168 @@ function HomePage() {
                 iconPosition="start"
                 label={t(TAB_MAP[tabKey]?.label)}
                 data-block={`tab-${tabKey}`}
+                sx={{
+                  '&.Mui-selected': {
+                    backgroundColor: '#fff',
+                  }
+                }}
               />
             ))}
           </Tabs>
 
           <form onSubmit={handleSubmit}>
-            {/* Text Tab */}
-            {tabOrder[activeTab] === 'text' && (
-              <TextField
-                fullWidth
-                multiline
-                rows={8}
-                label={t('home.textLabel')}
-                variant="outlined"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={t('home.textPlaceholder')}
-                disabled={loading}
-                sx={{ mb: 2 }}
-              />
-            )}
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: '36px', backgroundColor:'#F8F8FC', padding: '36px', borderRadius: '36px'}}>
 
-            {/* URL Tab */}
-            {tabOrder[activeTab] === 'url' && (
-              <TextField
-                fullWidth
-                label={t('home.urlLabel')}
-                variant="outlined"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder={t('home.urlPlaceholder')}
-                disabled={loading}
-                sx={{ mb: 2 }}
-                helperText={t('home.urlHelper')}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: url && (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setUrl('')} edge="end" size="small">
-                        <ClearIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
+              {/* Text Tab */}
+              {tabOrder[activeTab] === 'text' && (
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  label={t('home.textLabel')}
+                  variant="outlined"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={t('home.textPlaceholder')}
+                  disabled={loading}
+                  sx={{ mb: 2 }}
+                />
+              )}
 
-            {/* Site Tab */}
-            {tabOrder[activeTab] === 'site' && (
-              <TextField
-                fullWidth
-                label={t('home.siteUrlLabel')}
-                variant="outlined"
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                placeholder={t('home.siteUrlPlaceholder')}
-                disabled={loading}
-                sx={{ mb: 2 }}
-                helperText={t('home.siteUrlHelper')}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LanguageIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: siteUrl && (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setSiteUrl('')} edge="end" size="small">
-                        <ClearIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
+              {/* URL Tab */}
+              {tabOrder[activeTab] === 'url' && (
+                <TextFieldRounded
+                  fullWidth
+                  // label={t('home.urlLabel')}
+                  variant="outlined"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder={t('home.urlPlaceholder')}
+                  disabled={loading}
+                  sx={{ mb: 2 }}
+                  helperText={t('home.urlHelper')}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" placement="home">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: url && (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setUrl('')} edge="end" size="small">
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
 
-            {/* File Tab */}
-            {tabOrder[activeTab] === 'file' && (
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                    disabled={loading}
-                  >
-                    {t('home.fileSelectButton')}
-                    <input
-                      type="file"
-                      hidden
-                      accept=".txt,.html,.htm,.md"
-                      onChange={handleFileChange}
-                    />
-                  </Button>
-                  {selectedFile && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {t('home.fileSelected', { name: selectedFile.name })}
-                      </Typography>
-                      <IconButton size="small" onClick={handleClearFile}>
-                        <ClearIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  )}
+              {/* Site Tab */}
+              {tabOrder[activeTab] === 'site' && (
+                <TextField
+                  fullWidth
+                  label={t('home.siteUrlLabel')}
+                  variant="outlined"
+                  value={siteUrl}
+                  onChange={(e) => setSiteUrl(e.target.value)}
+                  placeholder={t('home.siteUrlPlaceholder')}
+                  disabled={loading}
+                  sx={{ mb: 2 }}
+                  helperText={t('home.siteUrlHelper')}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LanguageIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: siteUrl && (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setSiteUrl('')} edge="end" size="small">
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+
+              {/* File Tab */}
+              {tabOrder[activeTab] === 'file' && (
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<UploadIcon />}
+                      disabled={loading}
+                    >
+                      {t('home.fileSelectButton')}
+                      <input
+                        type="file"
+                        hidden
+                        accept=".txt,.html,.htm,.md"
+                        onChange={handleFileChange}
+                      />
+                    </Button>
+                    {selectedFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t('home.fileSelected', { name: selectedFile.name })}
+                        </Typography>
+                        <IconButton size="small" onClick={handleClearFile}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    {t('home.fileHelper')}
+                  </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  {t('home.fileHelper')}
-                </Typography>
-              </Box>
-            )}
+              )}
 
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button
-                data-block="analyze-button"
-                type="submit"
-                variant="contained"
-                size="large"
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : null}
-                sx={{ flex: { xs: '1 1 100%', sm: 1 } }}
-              >
-                {loading ? (tabOrder[activeTab] === 'site' ? t('home.creating') : t('home.analyzing')) : t('home.analyzeButton')}
-              </Button>
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={handleClear}
-                disabled={loading}
-                startIcon={<ClearIcon />}
-              >
-                {t('single.clear')}
-              </Button>
-              {results && (
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {/* Start button */}
                 <Button
+                  data-block="analyze-button"
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : null}
+                  sx={{ flex: { xs: '0 1 auto', sm: 1 }, padding: '12.5px 28px' }}
+                >
+                  {loading ? (tabOrder[activeTab] === 'site' ? t('home.creating') : t('home.analyzing')) : t('home.analyzeButton')}
+                </Button>
+                {/* Clear button */}
+                {false && <Button
                   variant="outlined"
                   size="large"
-                  onClick={downloadReport}
-                  startIcon={<SearchIcon />}
+                  onClick={handleClear}
+                  disabled={loading}
+                  startIcon={<ClearIcon />}
                 >
-                  {t('single.downloadJson')}
-                </Button>
-              )}
+                  {t('single.clear')}
+                </Button>}
+                {results && (
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={downloadReport}
+                    startIcon={<SearchIcon />}
+                  >
+                    {t('single.downloadJson')}
+                  </Button>
+                )}
+              </Box>
+
             </Box>
           </form>
         </Paper>

@@ -105,10 +105,10 @@ function Header() {
         justifyContent: 'space-between',
         padding: '8px 16px',
         bgcolor: 'background.paper',
-        borderBottom: 1,
+        borderBottom: 0,
         borderColor: 'divider',
         zIndex: 1100,
-        boxShadow: 1,
+        // boxShadow: 1,
       }}
     >
       {/* Logo */}
@@ -149,7 +149,7 @@ function Header() {
             },
           }}
         >
-          <LanguageIcon fontSize="small" />
+          {/* <LanguageIcon fontSize="small" /> */}
           <Typography variant="body2" component="span" sx={{ ml: 0.5, fontSize: '0.875rem' }}>
             {i18n.language === 'ru' ? 'EN' : 'RU'}
           </Typography>
@@ -186,7 +186,7 @@ function Header() {
         <Button
           variant="contained"
           size="small"
-          startIcon={<Person />}
+          // startIcon={<Person />}
           onClick={() => handleOpenAuthDialog('login')}
         >
           {t('home.login')}
@@ -274,6 +274,7 @@ function Header() {
 
 function App() {
   return (
+    
     <AuthProvider>
       <Header />
       <Box
