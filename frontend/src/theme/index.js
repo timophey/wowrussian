@@ -87,6 +87,13 @@ const theme = createTheme({
                 marginTop: '24px',
             }
         }
+    },
+    MuiDialog: {
+        styleOverrides: {
+            paper: {
+                padding: '80px 96px',
+            }
+        }
     }
   },
 });

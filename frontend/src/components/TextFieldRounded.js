@@ -8,7 +8,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     backgroundColor: '#ffffff',
     borderRadius: '32px',
-    height: '64px',
+    // height: '64px',
     '& fieldset': {
       borderColor: theme.palette.grey[300],
       BorderAll: 0,
@@ -16,6 +16,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     '& input': {
       borderRadius: '32px',
       height: '64px',
+      boxSizing: 'border-box',
     },
     '&:hover fieldset': {
       borderColor: theme.palette.grey[400],

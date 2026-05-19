@@ -21,6 +21,8 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from './services/api';
 import './i18n';
 
+import TextFieldRounded from './components/TextFieldRounded';
+
 function Header() {
   const { t, i18n } = useTranslation();
   const { user, logout, isAuthenticated, login, register } = useAuth();
@@ -194,16 +196,17 @@ function Header() {
       )}
 
       {/* Auth Dialog */}
-      <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           {authMode === 'login' ? t('home.login') : t('home.register')}
         </DialogTitle>
         <form onSubmit={handleAuthSubmit}>
           <DialogContent>
-            <TextField
+            <TextFieldRounded
               autoFocus
               margin="dense"
-              label={t('home.email')}
+              // label={t('home.email')}
+              placeholder={t('home.email')}
               type="email"
               fullWidth
               variant="outlined"
@@ -229,9 +232,10 @@ function Header() {
                 </label>
               </Box>
             )}
-            <TextField
+            <TextFieldRounded
               margin="dense"
-              label={t('home.password')}
+              // label={t('home.password')}
+              placeholder={t('home.password')}
               type="password"
               fullWidth
               variant="outlined"
@@ -252,9 +256,9 @@ function Header() {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setAuthDialogOpen(false)}>
+            {/* <Button onClick={() => setAuthDialogOpen(false)}>
               {t('dialogs.cancel')}
-            </Button>
+            </Button> */}
             <Button type="submit" variant="contained" disabled={authLoading}>
               {authLoading ? <CircularProgress size={20} /> : (authMode === 'login' ? t('home.login') : t('home.register'))}
             </Button>

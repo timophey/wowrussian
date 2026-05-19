@@ -280,11 +280,11 @@ function HomePage() {
 
               {/* Text Tab */}
               {tabOrder[activeTab] === 'text' && (
-                <TextField
+                <TextFieldRounded
                   fullWidth
                   multiline
                   rows={8}
-                  label={t('home.textLabel')}
+                  // label={t('home.textLabel')}
                   variant="outlined"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
@@ -325,9 +325,9 @@ function HomePage() {
 
               {/* Site Tab */}
               {tabOrder[activeTab] === 'site' && (
-                <TextField
+                <TextFieldRounded
                   fullWidth
-                  label={t('home.siteUrlLabel')}
+                  // label={t('home.siteUrlLabel')}
                   variant="outlined"
                   value={siteUrl}
                   onChange={(e) => setSiteUrl(e.target.value)}
